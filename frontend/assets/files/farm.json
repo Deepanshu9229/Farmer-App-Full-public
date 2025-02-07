@@ -1,0 +1,28 @@
+{
+"farmData" : [
+  {
+    "id": 1,
+    "name": "Farm A",
+    "location": "City X",
+    "area": "10",
+    "crop": "Rice",
+    "secratory": "Tanjiro"
+  },
+  {
+    "id": 2,
+    "name": "Farm B",
+    "location": "City Y",
+    "area": "5",
+    "crop": "Wheat",
+    "secratory": "Yuji" 
+  },
+  {
+    "id": 3,
+    "name": "Farm C",
+    "location": "City Z",
+    "area": "8",
+    "crop": "Corn",
+    "secratory": "Uta"
+  }
+]
+}

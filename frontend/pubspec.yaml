@@ -1,0 +1,36 @@
+name: frontend
+description: "A new Flutter project."
+publish_to: 'none'  
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_spinkit: ^5.2.1
+  intl:
+  cached_network_image:
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  lottie: ^3.2.0
+  model_viewer_plus: ^1.9.1
+  wifi_scan: ^0.4.1+1
+  permission_handler: ^10.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/files/
+    - assets/3d/Tree.glb
