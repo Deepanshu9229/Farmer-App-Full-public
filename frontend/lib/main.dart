@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
         MyRoutes.adminHomeRoute:(context) => const AdminHome(),
         // MyRoutes.secretaryHomeRoute:(context) => const SecretaryHome(),
         // Remove this from routes and use Navigator.push for SecretaryHome
-        MyRoutes.signupRoute:(context) => const SignupPage(),
+        MyRoutes.signupRoute:(context) => SignupPage(),
 
       },
     );

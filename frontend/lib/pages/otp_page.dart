@@ -33,7 +33,7 @@ class _OtpPageState extends State<OtpPage> {
   bool isNumberRegistered(String number) {
     //  API call to your backend
     // For now, we'll just simulate it with a hardcoded value
-    return true; // Assume the number is registered (false -> not registered)
+    return false; // Assume the number is registered (false -> not registered)
   }
 
   @override
