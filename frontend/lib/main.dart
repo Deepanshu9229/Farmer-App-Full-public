@@ -12,9 +12,13 @@ import 'package:frontend/pages/user_select_page.dart';
 import 'pages/home_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import './utils/routes.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure async operations complete
+  await dotenv.load(fileName: ".env"); // Load .env file
+
   runApp(const MyApp());
 }
 

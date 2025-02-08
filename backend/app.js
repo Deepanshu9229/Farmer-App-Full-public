@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const auth = require('./routes/auth.js');
+const cors = require('cors');
 
 const farmerSignupRoute = require('./routes/farmer/signup');
 const secretarySignupRoute = require('./routes/secretary/signup');
@@ -19,15 +20,24 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const isAuthenticated = require('./middlewares/authMiddleware.js');
 
+// Add cors configuration 
+const corsOptions = {
+    origin: true, // Allow all origins during development
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+};
+//to use cors
+app.use(cors(corsOptions));
 
 // require('./config/dotenv.js').config();
 
-app.use(express.json()); 
+app.use(express.json());
 app.use(session({
     secret: 'secretKey', // dont forget the secret key 
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } 
+    cookie: { secure: false }
 }));
 
 connectDB();
@@ -39,7 +49,7 @@ app.use('/api/secretary', secretarySignupRoute);
 app.use('/api/admin', adminSignupRoute);
 
 app.use('/api/farmer', isAuthenticated, require('./routes/farmer/index'));
-app.use('/api/secretary',isAuthenticated, require('./routes/secretary/index'));
+app.use('/api/secretary', isAuthenticated, require('./routes/secretary/index'));
 app.use('/api/admin', isAuthenticated, require('./routes/admin/index'));
 
 // const PORT = process.env.PORT || 4000; 
