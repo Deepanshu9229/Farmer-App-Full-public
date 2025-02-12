@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For inputFormatters
 import 'package:frontend/utils/routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/routes.dart';
@@ -47,7 +46,7 @@ class _PhonePageState extends State<PhonePage> {
       print("response body : ${response.body}");
 
       if(response.statusCode == 200){
-        Navigator.pushNamed(context, MyRoutes.otpRoute, arguments: {'mobileNumber' : mobile, 'otp' : otp});
+        Navigator.pushNamed(context, MyRoutes.otpRoute, arguments: {'mobileNumber' : mobile, 'otp' : otp, });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error: Status ${response.statusCode}")),
