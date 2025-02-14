@@ -40,6 +40,8 @@ class _SignupPageState extends State<SignupPage> {
 
       if (response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
+        // Print the farmer ID to the console
+        print("Farmer ID: ${responseData['farmerId']}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(responseData['message'])),
 

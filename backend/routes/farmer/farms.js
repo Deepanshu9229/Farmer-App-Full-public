@@ -3,6 +3,7 @@ const router = express.Router();
 const Farm = require('../../models/farm');
 const pumpRoutes = require('../farmer/pumps')
 
+
 router.get('/' , async (req, res) => {
     try {
         const farms = await Farm.find({ farmerId: req.user._id }).populate('farmerId'); // req.user._id = req.userId

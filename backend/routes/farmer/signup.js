@@ -16,7 +16,9 @@ router.post('/signup', async (req, res) => {
         }
     
         const newFarmer = new Farmer({ name, mobileNumber, city, pincode, residentialAddress });
-        await newFarmer.save();
+        const savedFarmer = await newFarmer.save();
+        console.log("New Farmer ID: ", savedFarmer._id);
+        
 
         return res.status(201).json({ message: 'Farmer signed up successfully!' });
     } catch (error) {
