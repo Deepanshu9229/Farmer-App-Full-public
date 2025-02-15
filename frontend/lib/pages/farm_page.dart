@@ -5,6 +5,8 @@ import 'package:frontend/models/farm.dart'; // For CatalogModel and Item classes
 import 'package:frontend/utils/routes.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/utils/cookie_manager.dart';
+
 
 
 class FarmPage extends StatefulWidget {
@@ -56,8 +58,13 @@ class _FarmPageState extends State<FarmPage> {
   Future<void> addFarm(String name, String location, String pincode, String address) async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    final String url = "$baseUrl/api/farmer/add"; // Correct endpoint for adding a farm
-    final headers = {"Content-Type": "application/json"};
+        final String url = "$baseUrl/api/farmer/add"; // Correct endpoint for adding a farm
+          
+          // Include the cookie from our global variable
+          final headers = {
+          "Content-Type": "application/json",
+          "Cookie": sessionCookie ?? ""
+              };
 
     final body = jsonEncode({
       "name": name,

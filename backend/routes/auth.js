@@ -14,37 +14,44 @@ let storedOtp = {};
 
 router.post('/select-user-type', (req, res) => {
     const { userType } = req.body;
+    
     if (!userType) {
         return res.status(400).json({ message: 'User type is required.' });
     }
     req.session.userType = userType; 
+    console.log(`User type received: ${userType}`);
     return res.json({ message: `User type selected: ${userType}. Please enter your mobile number.` });
 });
 
 router.post('/enter-mobile', (req, res) => {
-    const { mobileNumber } = req.body;
-    // const userType = req.session.userType;
-    req.session.mobileNumber = mobileNumber;
+    const { mobileNumber, otp } = req.body;  // Accept otp from the client
     if (!mobileNumber) {
         return res.status(400).json({ message: 'Mobile number is required.' });
     }
-
-    const otpToSend = sendOtp(mobileNumber);
-    storedOtp[mobileNumber] = otpToSend; 
+    req.session.mobileNumber = mobileNumber;
+    
+    // Instead of generating a fixed OTP, use the one from the client
+    storedOtp[mobileNumber] = otp; 
+    
     return res.json({ message: `OTP sent to ${mobileNumber}. Please verify it.` });
 });
 
+
 router.post('/verify-otp', async (req, res) => {
-    const userType = req.session.userType;
+    // Normalize userType to lowercase
+    const userType = (req.session.userType || "").toLowerCase();
     const mobileNumber = req.session.mobileNumber;
     const { otp } = req.body;
+
+    console.log("User type from session:", userType);
+    console.log("Mobile number from session:", mobileNumber);
 
     if (!mobileNumber || !otp) {
         return res.status(400).json({ message: 'Mobile number and OTP are required.' });
     }
 
     if (storedOtp[mobileNumber] && otp === storedOtp[mobileNumber]) {
-        delete storedOtp[mobileNumber]; 
+        delete storedOtp[mobileNumber];
 
         let user;
         switch (userType) {
@@ -72,5 +79,6 @@ router.post('/verify-otp', async (req, res) => {
         return res.status(400).json({ message: 'Invalid OTP' });
     }
 });
+
 
 module.exports = router;

@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/routes.dart';
+import 'package:frontend/utils/cookie_manager.dart'; // Import cookie manager
 
 class UserSelectPage extends StatelessWidget {
   const UserSelectPage({super.key});
@@ -17,14 +18,26 @@ class UserSelectPage extends StatelessWidget {
       final response = await http.post(
         Uri.parse(url),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"userType": userType}),
+        // Send userType in lowercase for consistency
+        body: jsonEncode({"userType": userType.toLowerCase()}),
       );
 
-       print("Response status: ${response.statusCode}"); 
-       print("Response body: ${response.body}"); 
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
+
+      // Capture session cookie from the response
+      final cookie = response.headers['set-cookie'];
+      if (cookie != null) {
+        sessionCookie = cookie;
+        print("Session cookie captured in UserSelectPage: $sessionCookie");
+      }
 
       if (response.statusCode == 200) {
-        Navigator.pushNamed(context, MyRoutes.phoneRoute, arguments: {'userType': userType});
+        Navigator.pushNamed(
+          context,
+          MyRoutes.phoneRoute,
+          arguments: {'userType': userType.toLowerCase()},
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Error: Unable to select user type")),
@@ -39,30 +52,30 @@ class UserSelectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold( // Changed from Material to Scaffold
-     body: Center(
-       child: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 50),
-            Image.asset('assets/images/user.png', height: 200),
-            const SizedBox(height: 50),
-            const Text(
-              "Select UserType",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 50),
-            Column(
-              children: [
-                _userTypeButton(context, "Admin"),
-                _userTypeButton(context, "Secretary"),
-                _userTypeButton(context, "Farmer"),
-              ],
-            )
-          ],
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 50),
+              Image.asset('assets/images/user.png', height: 200),
+              const SizedBox(height: 50),
+              const Text(
+                "Select UserType",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 50),
+              Column(
+                children: [
+                  _userTypeButton(context, "Admin"),
+                  _userTypeButton(context, "Secretary"),
+                  _userTypeButton(context, "Farmer"),
+                ],
+              )
+            ],
+          ),
         ),
       ),
-     ),
     );
   }
 
