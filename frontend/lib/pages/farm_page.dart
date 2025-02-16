@@ -7,8 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/utils/cookie_manager.dart';
 
-
-
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
 
@@ -33,7 +31,13 @@ class _FarmPageState extends State<FarmPage> {
     final String url = "$baseUrl/api/farmer/farms";
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": sessionCookie ?? "",
+        },
+      );
       if (response.statusCode == 200) {
         List<dynamic> farmData = jsonDecode(response.body);
         setState(() {
@@ -55,38 +59,48 @@ class _FarmPageState extends State<FarmPage> {
   }
 
   // Function to add a new farm via backend API
-  Future<void> addFarm(String name, String location, String pincode, String address) async {
+  Future<void> addFarm(
+      String name, String location, String pincode, String address) async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-        final String url = "$baseUrl/api/farmer/add"; // Correct endpoint for adding a farm
-          
-          // Include the cookie from our global variable
-          final headers = {
-          "Content-Type": "application/json",
-          "Cookie": sessionCookie ?? ""
-              };
+    final String url =
+        "$baseUrl/api/farmer/farms/add"; // endpoint for adding a farm
+
+    // Include the cookie from our global variable
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? ""
+    };
+    print(
+        "Using session cookie: $sessionCookie"); //Verify that the cookie isn’t empty
+    print("AddFarm URL: $url");
+    print("Headers: $headers");
 
     final body = jsonEncode({
       "name": name,
-      "mobileNumber": "", // Omit if not needed, or pass proper mobile number if required
-      "city": location,   // Adjust key if needed
       "pincode": pincode,
-      "residentialAddress": address,
+      "location": location,
+      "address": address,
     });
 
     try {
-      final response = await http.post(Uri.parse(url), headers: headers, body: body);
+      final response =
+          await http.post(Uri.parse(url), headers: headers, body: body);
       if (response.statusCode == 201) {
         // On success, show message and refresh the farm list
         final responseData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'] ?? 'Farm added successfully!')),
+          SnackBar(
+              content:
+                  Text(responseData['message'] ?? 'Farm added successfully!')),
         );
         fetchFarms(); // Refresh list after adding new farm
       } else {
         final errorData = jsonDecode(response.body);
+        final errorMessage =
+            errorData['message'] ?? errorData['error'] ?? 'Unknown error';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${errorData['message']}")),
+          SnackBar(content: Text("Error: $errorMessage")),
         );
       }
     } catch (error) {
@@ -95,7 +109,7 @@ class _FarmPageState extends State<FarmPage> {
         const SnackBar(content: Text("Failed to connect to server")),
       );
     }
-  } // <-- Added missing closing brace for addFarm
+  }
 
   // Show dialog to add new farm
   void _showAddFarmDialog() {
@@ -158,7 +172,8 @@ class _FarmPageState extends State<FarmPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Farm Details", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Farm Details",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.green.shade200,
       ),
@@ -197,19 +212,18 @@ class FarmItemWidget extends StatelessWidget {
           backgroundColor: Colors.green,
           child: Text(
             item.name[0], // Display the first letter of the name
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
           item.name,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        subtitle: Text(
-          "Location: ${item.location}\n"
-          "Area: ${item.area} acres\n"
-          "Crop: ${item.crop}\n"
-          "Secretary: ${item.secratory}",
-        ),
+        subtitle: Text("Name: ${item.name}\n"
+            "Location: ${item.location}\n"
+            "Pincode: ${item.pincode}\n"
+            "Address: ${item.address}"),
         trailing: const Icon(Icons.arrow_forward_ios_rounded),
         onTap: () {
           // Pass the farm ID and name to the pump page.

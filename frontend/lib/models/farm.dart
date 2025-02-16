@@ -1,5 +1,3 @@
-
-
 class CatalogModel {
   static List<Item> items = []; // start with empty list
 }
@@ -8,18 +6,16 @@ class Item {
   final num id;
   final String name;
   final String location;
-  final num area;
-  final String crop;
-  final String secratory;
+  final String pincode;
+  final String address;
 
   // Constructor with required fields
   Item({
     required this.id,
     required this.name,
     required this.location,
-    required this.area,
-    required this.crop,
-    required this.secratory,
+    required this.pincode,
+    required this.address,
   });
 
   factory Item.fromMap(Map<String, dynamic> map) {
@@ -27,9 +23,8 @@ class Item {
       id: map["id"] ?? 0,
       name: map["name"] ?? '',
       location: map["location"] ?? '',
-      area: map["area"] != null ? num.parse(map["area"].toString()) : 0,
-      crop: map["crop"] ?? '',
-      secratory: map["secratory"] ?? '',
+      pincode: map["pincode"]?.toString() ?? '',
+      address: map["address"] ?? '',
     );
   }
 
@@ -37,8 +32,7 @@ class Item {
         "id": id,
         "name": name,
         "location": location,
-        "area": area,
-        "crop": crop,
-        "secratory": secratory,
+        "pincode": pincode,
+        "address": address,
       };
 }

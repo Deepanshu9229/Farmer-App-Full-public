@@ -19,8 +19,11 @@ router.post('/signup', async (req, res) => {
         const savedFarmer = await newFarmer.save();
         console.log("New Farmer ID: ", savedFarmer._id);
         
+         // Set session data so the user is authenticated immediately
+         req.session.userId = savedFarmer._id;
+         req.session.mobileNumber = savedFarmer.mobileNumber;
 
-        return res.status(201).json({ message: 'Farmer signed up successfully!' });
+        return res.status(201).json({ message: 'Farmer signed up successfully!' , farmerId: savedFarmer._id});
     } catch (error) {
         console.error('Error during signup:', error);
         return res.status(500).json({ message: 'Internal server error.' });

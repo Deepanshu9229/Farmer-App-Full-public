@@ -81,12 +81,10 @@ class ItemWidget extends StatelessWidget {
           "Pumps in ${item.name}",
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        subtitle: Text(
-          "Location: ${item.location}\n"
-          "Area: ${item.area} acres\n"
-          "Crop: ${item.crop}\n"
-          "Secretary: ${item.secratory}",
-        ),
+        subtitle: Text("Name: ${item.name}\n"
+            "Location: ${item.location}\n"
+            "Pincode: ${item.pincode}\n"
+            "Address: ${item.address}"),
         trailing: const Icon(Icons.arrow_forward_ios_rounded),
         onTap: () {
           Navigator.push(

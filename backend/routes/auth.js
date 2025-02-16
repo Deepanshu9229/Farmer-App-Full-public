@@ -43,6 +43,9 @@ router.post('/verify-otp', async (req, res) => {
     const mobileNumber = req.session.mobileNumber;
     const { otp } = req.body;
 
+    console.log(otp);
+    
+
     console.log("User type from session:", userType);
     console.log("Mobile number from session:", mobileNumber);
 
