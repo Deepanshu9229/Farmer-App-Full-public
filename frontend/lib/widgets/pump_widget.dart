@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import '../models/pump.dart';
+import '../models/pump_model.dart';
 
 class PumpWidget extends StatelessWidget {
-  final Item pump;
+  final Pump pump;
   final ValueChanged<bool> onToggle;
   final ValueChanged<num> onTimerUpdate;
+  final VoidCallback onDelete;
 
   const PumpWidget({
     super.key,
     required this.pump,
     required this.onToggle,
     required this.onTimerUpdate,
+    required this.onDelete,
   });
 
   @override
@@ -18,11 +20,38 @@ class PumpWidget extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: ListTile(
+        onLongPress: () {
+          // Show a confirmation dialog on long press for deletion.
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("Delete Pump"),
+              content: Text("Are you sure you want to delete Pump ${pump.id}?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onDelete();
+                  },
+                  child: const Text(
+                    "Delete",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
         leading: CircleAvatar(
           backgroundColor: pump.status ? Colors.green : Colors.red,
           child: Text(
-            pump.id.toString(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            pump.id,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
@@ -30,20 +59,18 @@ class PumpWidget extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
-          "Location: ${pump.location}\n"
-          "Status: ${pump.status ? "ON" : "OFF"}\n"
-          "Timer: ${pump.timer} minutes",
+          "Location: ${pump.location}\nStatus: ${pump.status ? "ON" : "OFF"}\nTimer: ${pump.timer} minutes",
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-          Switch(
-          value: pump.status,
-          activeColor: Colors.green, // Change active color
-          inactiveThumbColor: Colors.red, // Change inactive thumb color
-          inactiveTrackColor: Colors.red.withOpacity(0.5), // Change inactive track color
-          onChanged: onToggle,
-        ),
+            Switch(
+              value: pump.status,
+              activeColor: Colors.green,
+              inactiveThumbColor: Colors.red,
+              inactiveTrackColor: Colors.red.withOpacity(0.5),
+              onChanged: onToggle,
+            ),
             IconButton(
               icon: const Icon(Icons.timer),
               onPressed: () => _showTimerDialog(context),
@@ -54,7 +81,6 @@ class PumpWidget extends StatelessWidget {
     );
   }
 
-  // Show a dialog to set the timer
   void _showTimerDialog(BuildContext context) {
     final TextEditingController timerController =
         TextEditingController(text: pump.timer.toString());
@@ -73,14 +99,14 @@ class PumpWidget extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // Close dialog
+              onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () {
                 final timerValue = num.tryParse(timerController.text) ?? 0;
-                onTimerUpdate(timerValue); // Update the timer value
-                Navigator.pop(context); // Close dialog
+                onTimerUpdate(timerValue);
+                Navigator.pop(context);
               },
               child: const Text("Set"),
             ),

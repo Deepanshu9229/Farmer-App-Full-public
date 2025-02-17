@@ -14,7 +14,6 @@ import 'package:google_fonts/google_fonts.dart';
 import './utils/routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure async operations complete
   await dotenv.load(fileName: ".env"); // Load .env file
@@ -35,7 +34,7 @@ class MyApp extends StatelessWidget {
         fontFamily: GoogleFonts.lato().fontFamily,
       ),
       //  initialRoute: MyRoutes.homeRoute,
-       initialRoute: MyRoutes.userSelectRoute,
+      initialRoute: MyRoutes.userSelectRoute,
       // initialRoute:  MyRoutes.signupRoute,
       routes: {
         // "/": (context) => const UserSelectPage(),
@@ -44,14 +43,22 @@ class MyApp extends StatelessWidget {
         MyRoutes.otpRoute: (context) => const OtpPage(),
         MyRoutes.homeRoute: (context) => const HomePage(),
         MyRoutes.farmRoute: (context) => const FarmPage(),
-        MyRoutes.pumpsfarmRoute: (context) => const PumpInFarm(),
-       // MyRoutes.pumpsRoute: (context) => const PumpsPage() // routes map dont allow argument sending, so use materialPageRoute(dynamic pass argument) page me hi define kr diya , alag se yaha nhi batana. 
-        MyRoutes.newsRoute:(context) => const NewsPage(),
-        MyRoutes.adminHomeRoute:(context) => const AdminHome(),
+        MyRoutes.pumpsfarmRoute: (context) => const PumpInFarmPage(),
+        // MyRoutes.pumpsRoute: (context) =>  PumpsPage(), // routes map dont allow argument sending, so use materialPageRoute(dynamic pass argument) page me hi define kr diya , alag se yaha nhi batana.
+        MyRoutes.pumpsRoute: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map;
+          return PumpsPage(
+            farmId: args['farmId'].toString(),
+            farmName: args['farmName'] ?? 'Pumps',
+            // farmerId: 'current_farmer_id',
+          );
+        },
+
+        MyRoutes.newsRoute: (context) => const NewsPage(),
+        MyRoutes.adminHomeRoute: (context) => const AdminHome(),
         // MyRoutes.secretaryHomeRoute:(context) => const SecretaryHome(),
         // Remove this from routes and use Navigator.push for SecretaryHome
-        MyRoutes.signupRoute:(context) => SignupPage(),
-
+        MyRoutes.signupRoute: (context) => SignupPage(),
       },
     );
   }

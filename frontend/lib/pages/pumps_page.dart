@@ -1,144 +1,123 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
-import '../widgets/pump_widget.dart';
-import '../models/pump.dart'; // For PumpModel and Item classes
-import 'package:wifi_scan/wifi_scan.dart'; // For Wi-Fi scanning
-import 'package:permission_handler/permission_handler.dart'; // For requesting permissions
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/utils/cookie_manager.dart';
+import 'package:frontend/models/pump_model.dart';
+import 'package:frontend/widgets/pump_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:wifi_scan/wifi_scan.dart';
 
 class PumpsPage extends StatefulWidget {
+  final String farmId;
   final String farmName;
 
-  const PumpsPage({super.key, required this.farmName});
+  const PumpsPage({super.key, required this.farmId, required this.farmName});
 
   @override
   State<PumpsPage> createState() => _PumpsPageState();
 }
 
 class _PumpsPageState extends State<PumpsPage> {
+  List<Pump> pumps = [];
+  bool isLoading = true;
   List<WiFiAccessPoint> availableNetworks = [];
 
   @override
   void initState() {
     super.initState();
     requestPermissions();
-    loadData();
+    fetchPumps();
   }
 
-  // ✅ Request necessary permissions
+  // Request necessary permissions for Wi-Fi scanning.
   Future<void> requestPermissions() async {
     final status = await Permission.locationWhenInUse.request();
     if (status.isGranted) {
-      print("Location permission granted.");
+      debugPrint("Location permission granted.");
     } else {
-      print("Location permission is required to scan Wi-Fi networks.");
+      debugPrint("Location permission is required to scan Wi-Fi networks.");
     }
   }
 
-  // ✅ Load pump data from JSON file
-  Future<void> loadData() async {
+  // Fetch pumps for the selected farm from the backend API.
+  Future<void> fetchPumps() async {
+    final String baseUrl =
+        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps";
+
     try {
-      final pumpJson =
-          await rootBundle.loadString("assets/files/PumpData.json");
-      final decodedData = jsonDecode(pumpJson);
-      var pumpsData = decodedData["pumpData"];
-
-      PumpModel.items =
-          List.from(pumpsData).map<Item>((item) => Item.fromMap(item)).toList();
-
-      setState(() {});
-    } catch (e) {
-      print("Error loading pump data: $e");
-    }
-  }
-
-  // ✅ Scan for available Wi-Fi networks
-  Future<void> scanWiFiNetworks() async {
-    // Check if scanning is allowed and handle the result correctly
-    CanStartScan canStartScanResult = await WiFiScan.instance.canStartScan();
-
-    if (canStartScanResult == CanStartScan.yes) {
-      // If scanning is allowed, start the scan
-      await WiFiScan.instance.startScan();
-      WiFiScan.instance.onScannedResultsAvailable.listen((results) {
-        setState(() {
-          availableNetworks = results;
-        });
+      final response = await http.get(Uri.parse(url), headers: {
+        "Content-Type": "application/json",
+        "Cookie": sessionCookie ?? "",
       });
-    } else {
-      // If scanning is not allowed, show a message or log the issue
-      print(
-          "Cannot start Wi-Fi scan. Ensure permissions are granted or conditions are met.");
+      if (response.statusCode == 200) {
+        List<dynamic> pumpData = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          pumps = pumpData.map((data) => Pump.fromMap(data)).toList();
+          isLoading = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error: Unable to fetch pumps")),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
-  // ✅ Connect to a Wi-Fi network (dummy connection logic)
-  Future<void> connectToNetwork(String ssid) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Connecting to $ssid...")),
-    );
-    // Add real connection logic here
+  // Delete a pump using the backend API.
+  Future<void> deletePump(String pumpId) async {
+    final String baseUrl =
+        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/$pumpId";
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? "",
+    };
+
+    debugPrint("Deleting pump with id: $pumpId");
+    debugPrint("DeletePump URL: $url");
+    try {
+      final response = await http.delete(Uri.parse(url), headers: headers);
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Pump deleted successfully")),
+        );
+        fetchPumps();
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage =
+            errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $errorMessage")));
+      }
+    } catch (error) {
+      debugPrint("DeletePump error: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to connect to server: $error")));
+    }
   }
 
-  // Wi-Fi Scan Dialog
-void _showWiFiDialog() {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Available Wi-Fi Networks"),
-        content: SingleChildScrollView( // Wrap content in SingleChildScrollView for scrollability
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 400), // Limit height
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Scanning for Wi-Fi networks..."),
-                if (availableNetworks.isNotEmpty)
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(), // Disable internal scroll
-                    itemCount: availableNetworks.length,
-                    itemBuilder: (context, index) {
-                      final network = availableNetworks[index];
-                      return ListTile(
-                        title: Text(network.ssid),
-                        subtitle: Text("Signal: ${network.level}"),
-                        onTap: () => connectToNetwork(network.ssid),
-                      );
-                    },
-                  ),
-                if (availableNetworks.isEmpty)
-                  const Text("No networks found."),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-            },
-            child: const Text("Close"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-  // ✅ Add new pump dialog
-  void _addNewPump() {
+  // Display a dialog to add a new pump.
+  void _showAddPumpDialog() {
     final TextEditingController idController = TextEditingController();
     final TextEditingController locationController = TextEditingController();
     final TextEditingController timerController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add New Pump"),
-          content: Column(
+      builder: (context) => AlertDialog(
+        title: const Text("Add New Pump"),
+        content: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
@@ -155,17 +134,16 @@ void _showWiFiDialog() {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "Timer (minutes)"),
               ),
-
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Column(
                   children: [
-                    const Text("Scan Wifi to Connect"),
+                    const Text("Scan Wi-Fi to Connect"),
                     IconButton(
                       icon: const Icon(Icons.wifi),
-                      onPressed: (){
-                        scanWiFiNetworks();  // Trigger Wi-Fi scan
-                       _showWiFiDialog();   // Show the Wi-Fi dialog
+                      onPressed: () {
+                        //scanWiFiNetworks();
+                        _showWiFiDialog();
                       },
                     ),
                   ],
@@ -173,36 +151,108 @@ void _showWiFiDialog() {
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                final id = int.tryParse(idController.text) ?? 0;
-                final location = locationController.text.trim();
-                final timer = num.tryParse(timerController.text) ?? 0;
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+         TextButton(
+  onPressed: () async {
+    final id = int.tryParse(idController.text) ?? 0;
+    final loc = locationController.text.trim();
+    final timer = num.tryParse(timerController.text) ?? 0;
+    if (id > 0 && loc.isNotEmpty) {
+      final String baseUrl =
+          dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+      // Note: use the current farmId from the PumpsPage widget.
+      final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/add";
+      final headers = {
+        "Content-Type": "application/json",
+        "Cookie": sessionCookie ?? "",
+      };
 
-                if (id > 0 && location.isNotEmpty) {
-                  setState(() {
-                    PumpModel.items.add(
-                      Item(
-                        id: id,
-                        location: location,
-                        status: false,
-                        timer: timer,
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
+      // The backend expects "pumpId" (and you can send extra fields if needed).
+      final body = jsonEncode({
+        "pumpId": id,
+        "location": loc,
+        "timer": timer,
+      });
+
+      try {
+        final response =
+            await http.post(Uri.parse(url), headers: headers, body: body);
+        if (response.statusCode == 201) {
+          // Pump added successfully; refresh pump list.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Pump added successfully")),
+          );
+          Navigator.pop(context); // Close the dialog.
+          fetchPumps(); // Refresh the pump list.
+        } else {
+          final errorData = jsonDecode(response.body);
+          final errorMessage =
+              errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error: $errorMessage")),
+          );
+        }
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to connect to server: $error")),
         );
-      },
+      }
+    }
+  },
+  child: const Text("Add"),
+),
+
+        ],
+      ),
+    );
+  }
+
+  // Display a dialog showing scanned Wi-Fi networks.
+  void _showWiFiDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Available Wi-Fi Networks"),
+        content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Scanning for Wi-Fi networks..."),
+                if (availableNetworks.isNotEmpty)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: availableNetworks.length,
+                    itemBuilder: (context, index) {
+                      final network = availableNetworks[index];
+                      return ListTile(
+                        title: Text(network.ssid),
+                        subtitle: Text("Signal: ${network.level}"),
+                        onTap: () =>
+                            debugPrint("Connecting to ${network.ssid}..."),
+                      );
+                    },
+                  )
+                else
+                  const Text("No networks found."),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -210,51 +260,40 @@ void _showWiFiDialog() {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "${widget.farmName} - Pump Details",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text("${widget.farmName} - Pump Details"),
         centerTitle: true,
         backgroundColor: Colors.blue.shade200,
       ),
-      body
-          : PumpModel.items.isNotEmpty
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : pumps.isNotEmpty
               ? ListView.builder(
-                  itemCount: PumpModel.items.length,
+                  itemCount: pumps.length,
                   itemBuilder: (context, index) {
+                    final pump = pumps[index];
                     return PumpWidget(
-                      pump: PumpModel.items[index],
+                      pump: pump,
                       onToggle: (status) {
                         setState(() {
-                          PumpModel.items[index] = Item(
-                            id: PumpModel.items[index].id,
-                            location: PumpModel.items[index].location,
-                            status: status,
-                            timer: PumpModel.items[index].timer,
-                          );
+                          pumps[index] = pump.copyWith(status: status);
                         });
                       },
                       onTimerUpdate: (newTimer) {
                         setState(() {
-                          PumpModel.items[index] = Item(
-                            id: PumpModel.items[index].id,
-                            location: PumpModel.items[index].location,
-                            status: PumpModel.items[index].status,
-                            timer: newTimer,
-                          );
+                          pumps[index] = pump.copyWith(timer: newTimer);
                         });
+                      },
+                      onDelete: () {
+                        deletePump(pump.id);
                       },
                     );
                   },
                 )
-              : const Center(child: CircularProgressIndicator()),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(left: 30, bottom: 50),
-        child: FloatingActionButton(
-          onPressed: _addNewPump,
-          backgroundColor: Colors.blue.shade200,
-          child: const Icon(Icons.add),
-        ),
+              : const Center(child: Text("No pumps found.")),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddPumpDialog,
+        backgroundColor: Colors.blue.shade200,
+        child: const Icon(Icons.add),
       ),
     );
   }

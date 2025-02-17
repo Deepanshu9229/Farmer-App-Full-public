@@ -1,100 +1,112 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
-import 'package:frontend/models/farm.dart'; // For CatalogModel and Item classes
+import 'package:frontend/models/farm.dart';
 import 'package:frontend/utils/routes.dart';
-import 'pumps_page.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/utils/cookie_manager.dart';
 
-class PumpInFarm extends StatefulWidget {
-  const PumpInFarm({super.key});
+class PumpInFarmPage extends StatefulWidget {
+  const PumpInFarmPage({super.key});
 
   @override
-  State<PumpInFarm> createState() => _PumpInFarmState();
+  State<PumpInFarmPage> createState() => _PumpInFarmPageState();
 }
 
-class _PumpInFarmState extends State<PumpInFarm> {
-  // Widget initialization with pre-loaded data
+class _PumpInFarmPageState extends State<PumpInFarmPage> {
+  List<Item> farms = [];
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    loadData();
+    fetchFarms(); // Dynamically fetch farms from backend on startup
   }
 
-  loadData() async {
-    final farmJson = await rootBundle.loadString("assets/files/farm.json");
-    final decodedData = jsonDecode(farmJson); // Convert JSON to string (map)
-    var farmsData = decodedData["farmData"];
+  // Fetch farms from backend API
+  Future<void> fetchFarms() async {
+    final String baseUrl =
+        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/farmer/farms";
 
-    // Update the list with data from JSON
-    CatalogModel.items =
-        List.from(farmsData).map<Item>((item) => Item.fromMap(item)).toList();
-    setState(() {}); // Refresh the UI after loading data
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": sessionCookie ?? "",
+        },
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> farmData = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          farms = farmData.map((data) => Item.fromMap(data)).toList();
+          isLoading = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error: Unable to fetch farms")),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            "Farm Details",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.blue.shade200,
+      appBar: AppBar(
+        title: const Text(
+          "Pump in Farm",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        body: CatalogModel.items.isNotEmpty
-            ? ListView.builder(
-                itemCount: CatalogModel.items.length,
-                itemBuilder: (context, index) {
-                  return ItemWidget(
-                    item: CatalogModel.items[index],
-                  );
-                },
-              )
-            : const Center(
-                child:
-                    CircularProgressIndicator(), // Loading indicator while data is being fetched
-              ));
-  }
-}
-
-// Card Widget for displaying individual item
-class ItemWidget extends StatelessWidget {
-  final Item item;
-
-  const ItemWidget({super.key, required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue,
-          child: Text(
-            item.name[0], // Display the first letter of the name
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        title: Text(
-          "Pumps in ${item.name}",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Text("Name: ${item.name}\n"
-            "Location: ${item.location}\n"
-            "Pincode: ${item.pincode}\n"
-            "Address: ${item.address}"),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PumpsPage(farmName: item.name),
-            ),
-          );
-        },
+        centerTitle: true,
+        backgroundColor: Colors.blue.shade200,
       ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : farms.isNotEmpty
+              ? ListView.builder(
+                  itemCount: farms.length,
+                  itemBuilder: (context, index) {
+                    final item = farms[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue,
+                          child: Text(
+                            item.name.isNotEmpty ? item.name[0] : '',
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        title: Text(
+                          "Pumps in : ${item.name}",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        subtitle: Text(
+                          "Location: ${item.location}\nPincode: ${item.pincode}\nAddress: ${item.address}",
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded),
+                        onTap: () {
+                          Navigator.pushNamed(context, MyRoutes.pumpsRoute, arguments: {
+                            'farmId': item.id,
+                            'farmName': item.name,
+                          });
+                        },
+                      ),
+                    );
+                  },
+                )
+              : const Center(child: Text("No farms found.")),
     );
   }
 }
