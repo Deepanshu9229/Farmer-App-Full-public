@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
-import 'package:frontend/models/farm.dart'; // For CatalogModel and Item classes
+import 'package:frontend/models/farm.dart';
 import 'package:frontend/utils/routes.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/utils/cookie_manager.dart';
+import 'package:frontend/widgets/farm_item_widget.dart'; // Import the widget
 
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
@@ -31,13 +31,10 @@ class _FarmPageState extends State<FarmPage> {
     final String url = "$baseUrl/api/farmer/farms";
 
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": sessionCookie ?? "",
-        },
-      );
+      final response = await http.get(Uri.parse(url), headers: {
+        "Content-Type": "application/json",
+        "Cookie": sessionCookie ?? "",
+      });
       if (response.statusCode == 200) {
         List<dynamic> farmData = jsonDecode(response.body);
         setState(() {
@@ -52,9 +49,8 @@ class _FarmPageState extends State<FarmPage> {
       }
     } catch (e) {
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -63,16 +59,13 @@ class _FarmPageState extends State<FarmPage> {
       String name, String location, String pincode, String address) async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    final String url =
-        "$baseUrl/api/farmer/farms/add"; // endpoint for adding a farm
+    final String url = "$baseUrl/api/farmer/farms/add"; // endpoint for adding a farm
 
-    // Include the cookie from our global variable
     final headers = {
       "Content-Type": "application/json",
       "Cookie": sessionCookie ?? ""
     };
-    print(
-        "Using session cookie: $sessionCookie"); //Verify that the cookie isn’t empty
+    print("Using session cookie: $sessionCookie");
     print("AddFarm URL: $url");
     print("Headers: $headers");
 
@@ -87,26 +80,58 @@ class _FarmPageState extends State<FarmPage> {
       final response =
           await http.post(Uri.parse(url), headers: headers, body: body);
       if (response.statusCode == 201) {
-        // On success, show message and refresh the farm list
         final responseData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content:
-                  Text(responseData['message'] ?? 'Farm added successfully!')),
+              content: Text(responseData['message'] ??
+                  'Farm added successfully!')),
         );
         fetchFarms(); // Refresh list after adding new farm
       } else {
         final errorData = jsonDecode(response.body);
         final errorMessage =
             errorData['message'] ?? errorData['error'] ?? 'Unknown error';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $errorMessage")),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $errorMessage")));
       }
     } catch (error) {
-      print("Signup Error: $error");
+      print("AddFarm error: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to connect to server")),
+      );
+    }
+  }
+
+  // Function to delete a farm via backend API
+  Future<void> deleteFarm(String farmId) async {
+    final String baseUrl =
+        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/farmer/farms/$farmId";
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? "",
+    };
+
+    print("Deleting farm with id: $farmId");
+    print("DeleteFarm URL: $url");
+    try {
+      final response = await http.delete(Uri.parse(url), headers: headers);
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Farm deleted successfully")),
+        );
+        fetchFarms();
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage =
+            errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $errorMessage")));
+      }
+    } catch (error) {
+      print("DeleteFarm error: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to connect to server: $error")),
       );
     }
   }
@@ -152,7 +177,6 @@ class _FarmPageState extends State<FarmPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              // Call addFarm function with the entered details
               addFarm(
                 nameController.text,
                 locationController.text,
@@ -183,55 +207,20 @@ class _FarmPageState extends State<FarmPage> {
               ? ListView.builder(
                   itemCount: farms.length,
                   itemBuilder: (context, index) {
-                    return FarmItemWidget(item: farms[index]);
+                    final item = farms[index];
+                    return FarmItemWidget(
+                      item: item,
+                      onDelete: () {
+                        deleteFarm(item.id.toString());
+                      },
+                    );
                   },
                 )
               : const Center(child: Text("No farms found.")),
-      // Floating "Add" button to open the add farm dialog
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddFarmDialog,
         child: const Icon(Icons.add),
         backgroundColor: Colors.green,
-      ),
-    );
-  }
-}
-
-// Card Widget for displaying individual farm details
-class FarmItemWidget extends StatelessWidget {
-  final Item item;
-
-  const FarmItemWidget({super.key, required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.green,
-          child: Text(
-            item.name[0], // Display the first letter of the name
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        title: Text(
-          item.name,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Text("Name: ${item.name}\n"
-            "Location: ${item.location}\n"
-            "Pincode: ${item.pincode}\n"
-            "Address: ${item.address}"),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded),
-        onTap: () {
-          // Pass the farm ID and name to the pump page.
-          Navigator.pushNamed(context, MyRoutes.pumpsfarmRoute, arguments: {
-            'farmId': item.id,
-            'farmName': item.name,
-          });
-        },
       ),
     );
   }

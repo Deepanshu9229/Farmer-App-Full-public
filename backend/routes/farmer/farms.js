@@ -32,12 +32,16 @@ router.post('/add' , async (req, res) => {
     }
 });
 
-router.delete('/:farmId' , async(req , res) => {
-    const {farmId} = req.params.farmId;
-
-    await Farm.delete({_id : farmId});
-    
-})
+router.delete('/:farmId', async (req, res) => {
+    const { farmId } = req.params; // instead of req.params.farmId
+    try {
+      await Farm.deleteOne({ _id: farmId });
+      res.status(200).json({ message: 'Farm deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
 
 router.use('/:farmId/pumps', pumpRoutes); 
 

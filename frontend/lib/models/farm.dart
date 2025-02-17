@@ -3,7 +3,7 @@ class CatalogModel {
 }
 
 class Item {
-  final num id;
+  final String id; // use String for MongoDB _id
   final String name;
   final String location;
   final String pincode;
@@ -20,7 +20,8 @@ class Item {
 
   factory Item.fromMap(Map<String, dynamic> map) {
     return Item(
-      id: map["id"] ?? 0,
+      // Check for '_id' first then 'id'
+      id: map["_id"]?.toString() ?? map["id"]?.toString() ?? '',
       name: map["name"] ?? '',
       location: map["location"] ?? '',
       pincode: map["pincode"]?.toString() ?? '',
