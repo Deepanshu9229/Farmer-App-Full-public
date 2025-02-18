@@ -106,8 +106,9 @@ class _PumpsPageState extends State<PumpsPage> {
     }
   }
 
-  // Display a dialog to add a new pump.
+  // Display a dialog to add a new pump via backend API.
   void _showAddPumpDialog() {
+    final TextEditingController pumpNameController = TextEditingController();
     final TextEditingController idController = TextEditingController();
     final TextEditingController locationController = TextEditingController();
     final TextEditingController timerController = TextEditingController();
@@ -120,6 +121,10 @@ class _PumpsPageState extends State<PumpsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TextField(
+                controller: pumpNameController,
+                decoration: const InputDecoration(labelText: "Pump Name"),
+              ),
               TextField(
                 controller: idController,
                 keyboardType: TextInputType.number,
@@ -142,7 +147,6 @@ class _PumpsPageState extends State<PumpsPage> {
                     IconButton(
                       icon: const Icon(Icons.wifi),
                       onPressed: () {
-                        //scanWiFiNetworks();
                         _showWiFiDialog();
                       },
                     ),
@@ -157,56 +161,50 @@ class _PumpsPageState extends State<PumpsPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
-         TextButton(
-  onPressed: () async {
-    final id = int.tryParse(idController.text) ?? 0;
-    final loc = locationController.text.trim();
-    final timer = num.tryParse(timerController.text) ?? 0;
-    if (id > 0 && loc.isNotEmpty) {
-      final String baseUrl =
-          dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-      // Note: use the current farmId from the PumpsPage widget.
-      final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/add";
-      final headers = {
-        "Content-Type": "application/json",
-        "Cookie": sessionCookie ?? "",
-      };
-
-      // The backend expects "pumpId" (and you can send extra fields if needed).
-      final body = jsonEncode({
-        "pumpId": id,
-        "location": loc,
-        "timer": timer,
-      });
-
-      try {
-        final response =
-            await http.post(Uri.parse(url), headers: headers, body: body);
-        if (response.statusCode == 201) {
-          // Pump added successfully; refresh pump list.
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Pump added successfully")),
-          );
-          Navigator.pop(context); // Close the dialog.
-          fetchPumps(); // Refresh the pump list.
-        } else {
-          final errorData = jsonDecode(response.body);
-          final errorMessage =
-              errorData['message'] ?? errorData['error'] ?? 'Unknown error';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: $errorMessage")),
-          );
-        }
-      } catch (error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to connect to server: $error")),
-        );
-      }
-    }
-  },
-  child: const Text("Add"),
-),
-
+          TextButton(
+            onPressed: () async {
+              final pumpName = pumpNameController.text.trim();
+              final id = idController.text.trim();
+              final loc = locationController.text.trim();
+              final timer = num.tryParse(timerController.text) ?? 0;
+              if (id.isNotEmpty && loc.isNotEmpty && pumpName.isNotEmpty) {
+                final String baseUrl =
+                    dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+                final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/add";
+                final headers = {
+                  "Content-Type": "application/json",
+                  "Cookie": sessionCookie ?? "",
+                };
+                final body = jsonEncode({
+                  "pumpName": pumpName,
+                  "pumpId": id,
+                  "location": loc,
+                  "timer": timer,
+                });
+                try {
+                  final response = await http.post(Uri.parse(url), headers: headers, body: body);
+                  if (response.statusCode == 201) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Pump added successfully")),
+                    );
+                    Navigator.pop(context);
+                    fetchPumps();
+                  } else {
+                    final errorData = jsonDecode(response.body);
+                    final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error: $errorMessage")),
+                    );
+                  }
+                } catch (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Failed to connect to server: $error")),
+                  );
+                }
+              }
+            },
+            child: const Text("Add"),
+          ),
         ],
       ),
     );
@@ -235,8 +233,7 @@ class _PumpsPageState extends State<PumpsPage> {
                       return ListTile(
                         title: Text(network.ssid),
                         subtitle: Text("Signal: ${network.level}"),
-                        onTap: () =>
-                            debugPrint("Connecting to ${network.ssid}..."),
+                        onTap: () => debugPrint("Connecting to ${network.ssid}..."),
                       );
                     },
                   )

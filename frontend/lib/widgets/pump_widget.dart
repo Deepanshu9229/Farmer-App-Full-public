@@ -17,16 +17,19 @@ class PumpWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Print pump id to console for debugging purposes.
+    debugPrint("Displaying pump with ID: ${pump.id}");
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: ListTile(
         onLongPress: () {
-          // Show a confirmation dialog on long press for deletion.
+          // Show a confirmation dialog for deletion on long press.
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text("Delete Pump"),
-              content: Text("Are you sure you want to delete Pump ${pump.id}?"),
+              content: Text("Are you sure you want to delete pump ${pump.pumpName} (ID: ${pump.id})?"),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -37,10 +40,7 @@ class PumpWidget extends StatelessWidget {
                     Navigator.pop(context);
                     onDelete();
                   },
-                  child: const Text(
-                    "Delete",
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  child: const Text("Delete", style: TextStyle(color: Colors.red)),
                 ),
               ],
             ),
@@ -49,17 +49,16 @@ class PumpWidget extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: pump.status ? Colors.green : Colors.red,
           child: Text(
-            pump.id,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
+            pump.pumpName.isNotEmpty ? pump.pumpName[0] : '',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
-          "Pump ${pump.id}",
+          "Pump: ${pump.pumpName}", // Display pump name here
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
-          "Location: ${pump.location}\nStatus: ${pump.status ? "ON" : "OFF"}\nTimer: ${pump.timer} minutes",
+          "Location: ${pump.location}\nStatus: ${pump.status ? 'ON' : 'OFF'}\nTimer: ${pump.timer} minutes",
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -93,9 +92,7 @@ class PumpWidget extends StatelessWidget {
           content: TextField(
             controller: timerController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "Enter timer (minutes)",
-            ),
+            decoration: const InputDecoration(labelText: "Enter timer (minutes)"),
           ),
           actions: [
             TextButton(

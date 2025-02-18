@@ -76,19 +76,21 @@ router.get('/' ,  async (req , res) => {
 })
 
 router.post('/add' , async (req, res) => {   
-    const { pumpId } = req.body
+    const { pumpId, pumpName } = req.body
     const farmId = req.params.farmId;
     console.log(farmId);
     try {
         const newPump = await Pump.create({
-            pumpId ,
-            farmId ,
-            status : false , 
+            pumpId,             // from req.body.pumpId
+            name: pumpName,     // from req.body.pumpName
+            farmId,             // from req.params.farmId
+            status: false, 
         });
-
+        
         // await newPump.save();
         res.status(201).json({ message: 'Pump added successfully', pump: newPump });
     } catch (error) {
+        console.error('Error adding pump:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

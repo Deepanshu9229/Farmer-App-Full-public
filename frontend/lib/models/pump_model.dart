@@ -5,12 +5,14 @@ class PumpModel {
 }
 
 class Pump {
+  final String pumpName; // New field for the pump's name
   final String id;
   final String location;
   final bool status;
   final num timer;
 
   Pump({
+    required this.pumpName,
     required this.id,
     required this.location,
     required this.status,
@@ -19,6 +21,7 @@ class Pump {
 
   factory Pump.fromMap(Map<String, dynamic> map) {
     return Pump(
+      pumpName: map["name"]?.toString() ?? 'Unnamed Pump',
       id: map["_id"]?.toString() ?? map["id"]?.toString() ?? '',
       location: map["location"]?.toString() ?? '',
       status: map["status"] is bool
@@ -31,6 +34,7 @@ class Pump {
   }
 
   Map<String, dynamic> toMap() => {
+        "name": pumpName,
         "id": id,
         "location": location,
         "status": status,
@@ -38,12 +42,14 @@ class Pump {
       };
 
   Pump copyWith({
+    String? pumpName,
     String? id,
     String? location,
     bool? status,
     num? timer,
   }) {
     return Pump(
+      pumpName: pumpName ?? this.pumpName,
       id: id ?? this.id,
       location: location ?? this.location,
       status: status ?? this.status,
