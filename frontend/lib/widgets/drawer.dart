@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/utils/routes.dart';
 
 class MyDrawer extends StatelessWidget {
   final String farmerName;
@@ -75,7 +76,7 @@ class MyDrawer extends StatelessWidget {
               ),
               onTap: () {
                 // Handle signout: clear session data, then navigate to login screen.
-                Navigator.pushNamedAndRemoveUntil(context, '/userSelect', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(context, MyRoutes.userSelectRoute, (route) => false);
               },
             ),
           ],

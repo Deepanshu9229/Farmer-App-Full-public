@@ -111,7 +111,7 @@ class _PumpsPageState extends State<PumpsPage> {
     final TextEditingController pumpNameController = TextEditingController();
     final TextEditingController idController = TextEditingController();
     final TextEditingController locationController = TextEditingController();
-    final TextEditingController timerController = TextEditingController();
+    // final TextEditingController timerController = TextEditingController();
 
     showDialog(
       context: context,
@@ -134,11 +134,11 @@ class _PumpsPageState extends State<PumpsPage> {
                 controller: locationController,
                 decoration: const InputDecoration(labelText: "Location"),
               ),
-              TextField(
-                controller: timerController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Timer (minutes)"),
-              ),
+              // TextField(
+              //   controller: timerController,
+              //   keyboardType: TextInputType.number,
+              //   decoration: const InputDecoration(labelText: "Timer (minutes)"),
+              // ),
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Column(
@@ -166,7 +166,7 @@ class _PumpsPageState extends State<PumpsPage> {
               final pumpName = pumpNameController.text.trim();
               final id = idController.text.trim();
               final loc = locationController.text.trim();
-              final timer = num.tryParse(timerController.text) ?? 0;
+              // final timer = num.tryParse(timerController.text) ?? 0;
               if (id.isNotEmpty && loc.isNotEmpty && pumpName.isNotEmpty) {
                 final String baseUrl =
                     dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
@@ -179,7 +179,7 @@ class _PumpsPageState extends State<PumpsPage> {
                   "pumpName": pumpName,
                   "pumpId": id,
                   "location": loc,
-                  "timer": timer,
+                  // "timer": timer,
                 });
                 try {
                   final response = await http.post(Uri.parse(url), headers: headers, body: body);
