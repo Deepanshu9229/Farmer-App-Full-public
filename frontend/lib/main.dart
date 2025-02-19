@@ -13,12 +13,13 @@ import 'pages/home_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import './utils/routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure async operations complete
   await dotenv.load(fileName: ".env"); // Load .env file
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp())); //Wrap Your App with ProviderScope 
 }
 
 class MyApp extends StatelessWidget {
@@ -58,7 +59,7 @@ class MyApp extends StatelessWidget {
         MyRoutes.adminHomeRoute: (context) => const AdminHome(),
         // MyRoutes.secretaryHomeRoute:(context) => const SecretaryHome(),
         // Remove this from routes and use Navigator.push for SecretaryHome
-        MyRoutes.signupRoute: (context) => SignupPage(),
+        MyRoutes.signupRoute: (context) => const SignupPage(),
       },
     );
   }

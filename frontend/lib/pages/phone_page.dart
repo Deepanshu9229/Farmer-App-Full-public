@@ -56,9 +56,10 @@ class _PhonePageState extends State<PhonePage> {
       }
 
       if (response.statusCode == 200) {
-        Navigator.pushNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
           MyRoutes.otpRoute,
+          (Route<dynamic> route) => false, //clears entire stack
           arguments: {'mobileNumber': mobile, 'otp': otp},
         );
       } else {

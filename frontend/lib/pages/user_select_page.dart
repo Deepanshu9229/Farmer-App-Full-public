@@ -33,9 +33,10 @@ class UserSelectPage extends StatelessWidget {
       }
 
       if (response.statusCode == 200) {
-        Navigator.pushNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
           MyRoutes.phoneRoute,
+          (Route<dynamic> route) => false, //clear entire stack
           arguments: {'userType': userType.toLowerCase()},
         );
       } else {

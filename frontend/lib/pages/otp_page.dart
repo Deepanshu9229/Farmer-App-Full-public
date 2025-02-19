@@ -56,13 +56,13 @@ class _OtpPageState extends State<OtpPage> {
 
         // Navigate based on the redirectUrl returned by your backend
         if (redirectUrl.contains('admin')) {
-          Navigator.pushReplacementNamed(context, '/adminHome');
+          Navigator.pushNamedAndRemoveUntil(context, '/adminHome', (Route<dynamic> route) => false,);
         } else if (redirectUrl.contains('secretary')) {
-          Navigator.pushReplacementNamed(context, '/secretaryHome');
+          Navigator.pushNamedAndRemoveUntil(context, '/secretaryHome', (Route<dynamic> route) => false,);
         } else if (redirectUrl.contains('signup')) {
-          Navigator.pushReplacementNamed(context, '/signup');
+          Navigator.pushNamedAndRemoveUntil(context, '/signup', (Route<dynamic> route) => false,);
         } else {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (Route<dynamic> route) => false,);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

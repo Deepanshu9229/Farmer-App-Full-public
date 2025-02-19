@@ -4,15 +4,17 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/utils/cookie_manager.dart'; // Import your cookie manager
 import '../utils/routes.dart';
+import 'package:frontend/models/current_user.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SignupPage extends StatefulWidget {
+class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
 
   @override
   _SignupPageState createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
+class _SignupPageState extends ConsumerState<SignupPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers to get user input
@@ -25,8 +27,7 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> signupUser() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final String baseUrl =
-        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String baseUrl = dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
     final String url = "$baseUrl/api/farmer/signup";
     final headers = {"Content-Type": "application/json"};
 
@@ -39,7 +40,8 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
-      final response = await http.post(Uri.parse(url), headers: headers, body: body);
+      final response =
+          await http.post(Uri.parse(url), headers: headers, body: body);
 
       if (response.statusCode == 201) {
         // Capture the session cookie from the response headers
@@ -48,15 +50,25 @@ class _SignupPageState extends State<SignupPage> {
           sessionCookie = cookie;
           print("Session cookie captured in SignupPage: $sessionCookie");
         }
-        
+
         final responseData = jsonDecode(response.body);
         print("Farmer ID: ${responseData['farmerId']}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(responseData['message'])),
         );
 
-        // Navigate to home page
-        Navigator.pushReplacementNamed(context, '/home');
+        //---------- Set the current user using the Riverpod notifier.
+        ref.read(currentUserProvider.notifier).setUser(User(
+          name: nameController.text,
+          mobileNumber: mobileNumberController.text,
+        ));
+
+        // Navigate to home page, clearing all previous routes.
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (Route<dynamic> route) => false,
+        );
       } else {
         final errorData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,7 +135,8 @@ class _SignupPageState extends State<SignupPage> {
         controller: controller,
         keyboardType: keyboardType,
         decoration: InputDecoration(labelText: label),
-        validator: (value) => value!.isEmpty ? "Please enter your $label" : null,
+        validator: (value) =>
+            value!.isEmpty ? "Please enter your $label" : null,
       ),
     );
   }

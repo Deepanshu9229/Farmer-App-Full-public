@@ -22,6 +22,7 @@ dependencies:
   wifi_scan: ^0.4.1+1
   permission_handler: ^10.4.2
   flutter_dotenv: ^5.2.1
+  flutter_riverpod: ^2.6.1
 
 dev_dependencies:
   flutter_test:

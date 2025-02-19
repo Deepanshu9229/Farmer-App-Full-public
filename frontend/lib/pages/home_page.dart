@@ -3,17 +3,17 @@ import 'package:frontend/utils/routes.dart';
 import 'package:frontend/widgets/drawer.dart';
 import '../widgets/weather_card.dart'; // Import WeatherCard
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/current_user.dart';
 
-class HomePage extends StatefulWidget {
+//Convert your HomePage to a ConsumerWidget so you can read the current user state.
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Read the current user from Riverpod provider.
+    final currentUser = ref.watch(currentUserProvider);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.grey[200],
@@ -45,7 +45,6 @@ class _HomePageState extends State<HomePage> {
               // ar: true,
               autoRotate: false,
               // cameraControls: true,
-              
             ),
           ),
 
@@ -129,7 +128,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      drawer: const MyDrawer(),
+      drawer: MyDrawer(
+        farmerName: currentUser?.name ?? "Unknown Farmer",
+        mobileNumber: currentUser?.mobileNumber ?? "0000000000",
+      ),
     );
   }
 }
