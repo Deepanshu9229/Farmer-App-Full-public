@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-// const bcrypt = require('bcrypt');
 const Secretary = require('../../models/secretary.js');
 
 router.post('/signup', async (req, res) => {
-    const { name , city , pincode , residentialAddress } = req.body;
-    const mobileNumber = req.session.mobileNumber;
+    const { name, city, pincode, residentialAddress } = req.body;
+    const mobileNumber = req.session.mobileNumber; // Must be set from OTP flow
 
-    if (!name || !mobileNumber ) {
+    // Validate that all required fields are provided.
+    if (!name || !mobileNumber || !city || !pincode || !residentialAddress) {
         return res.status(400).json({ message: 'All fields are required.' });
     }
 
@@ -21,15 +21,19 @@ router.post('/signup', async (req, res) => {
             name,
             mobileNumber,
             city,
-            pincode ,
+            pincode,
             residentialAddress,
+            
         });
-        await newSecretary.save();
-        req.session.userId = newSecretary._id;
-        req.session.mobileNumber = newSecretary.mobileNumber;
+        const savedSecretary = await newSecretary.save();
+        req.session.userId = savedSecretary._id;
+        req.session.mobileNumber = savedSecretary.mobileNumber;
 
         console.log('Session after signup:', req.session);
-        return res.status(201).json({ message: 'Farmer signed up successfully!' });
+        return res.status(201).json({ 
+          message: 'Secretary signed up successfully!', 
+          secretaryId: savedSecretary._id 
+        });
         
     } catch (error) {
         console.error('Error during signup:', error);

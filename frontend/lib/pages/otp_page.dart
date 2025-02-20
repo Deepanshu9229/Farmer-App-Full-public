@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/utils/cookie_manager.dart';
 import '../tools/snacks.dart';
+import '../utils/routes.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
@@ -20,7 +21,6 @@ class _OtpPageState extends State<OtpPage> {
   @override
   void initState() {
     super.initState();
-    // Optionally, show a SnackBar with the OTP (for demo purposes)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -38,38 +38,41 @@ class _OtpPageState extends State<OtpPage> {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
     final String url = "$baseUrl/api/auth/verify-otp";
-    final headers = {"Content-Type": "application/json", "Cookie": sessionCookie ?? ""};
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? "",
+    };
     final body = jsonEncode({"otp": otpController.text});
 
     try {
       final response = await http.post(Uri.parse(url), headers: headers, body: body);
       if (response.statusCode == 200) {
-        // Capture the session cookie from the response headers
+        // Update session cookie if provided.
         final cookie = response.headers['set-cookie'];
         if (cookie != null) {
           sessionCookie = cookie;
-          print("Session cookie set: $sessionCookie");
+          print("Session cookie updated in OtpPage: $sessionCookie");
         }
-        // Parse the response to get a redirect URL or user type
         final responseData = jsonDecode(response.body);
         final redirectUrl = responseData['redirectUrl'] as String? ?? "";
-
-        // Navigate based on the redirectUrl returned by your backend
+        print("Redirect URL: $redirectUrl");
         if (redirectUrl.contains('admin')) {
-          Navigator.pushNamedAndRemoveUntil(context, '/adminHome', (Route<dynamic> route) => false,);
-        } else if (redirectUrl.contains('secretary')) {
-          Navigator.pushNamedAndRemoveUntil(context, '/secretaryHome', (Route<dynamic> route) => false,);
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.adminHomeRoute, (route) => false);
+        } else if (redirectUrl.contains('secretary/home')) {
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.secretaryHomeRoute, (route) => false);
+        } else if (redirectUrl.contains('secretary/signup')) {
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.secretarySignupRoute, (route) => false);
         } else if (redirectUrl.contains('signup')) {
-          Navigator.pushNamedAndRemoveUntil(context, '/signup', (Route<dynamic> route) => false,);
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.signupRoute, (route) => false);
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (Route<dynamic> route) => false,);
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.homeRoute, (route) => false);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("OTP verification failed: ${response.body}")),
         );
       }
-    } catch (e) {
+    }  catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error verifying OTP: $e")),
       );
@@ -78,7 +81,6 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    // We no longer need to compare client-side since the backend verifies the OTP.
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -86,17 +88,11 @@ class _OtpPageState extends State<OtpPage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              Image.asset(
-                "assets/images/otp.png",
-                height: 180,
-              ),
+              Image.asset("assets/images/otp.png", height: 180),
               const SizedBox(height: 40),
               const Text(
                 "OTP Verification",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 30),
               Form(
@@ -127,7 +123,8 @@ class _OtpPageState extends State<OtpPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff008B38),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {

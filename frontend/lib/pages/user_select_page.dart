@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/routes.dart';
-import 'package:frontend/utils/cookie_manager.dart'; // Import cookie manager
+import 'package:frontend/utils/cookie_manager.dart';
 
 class UserSelectPage extends StatelessWidget {
   const UserSelectPage({super.key});
@@ -11,32 +11,27 @@ class UserSelectPage extends StatelessWidget {
   Future<void> sendUserType(String userType, BuildContext context) async {
     final String baseUrl = dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
     final String url = "$baseUrl/api/auth/select-user-type";
-
-    print("Attempting to connect to: $url");
+    print("Connecting to: $url");
 
     try {
       final response = await http.post(
         Uri.parse(url),
         headers: {"Content-Type": "application/json"},
-        // Send userType in lowercase for consistency
         body: jsonEncode({"userType": userType.toLowerCase()}),
       );
-
-      print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
-
-      // Capture session cookie from the response
+      print("Status: ${response.statusCode} | Body: ${response.body}");
+      
       final cookie = response.headers['set-cookie'];
       if (cookie != null) {
         sessionCookie = cookie;
-        print("Session cookie captured in UserSelectPage: $sessionCookie");
+        print("Session cookie captured: $sessionCookie");
       }
 
       if (response.statusCode == 200) {
         Navigator.pushNamedAndRemoveUntil(
           context,
           MyRoutes.phoneRoute,
-          (Route<dynamic> route) => false, //clear entire stack
+          (Route<dynamic> route) => false,
           arguments: {'userType': userType.toLowerCase()},
         );
       } else {

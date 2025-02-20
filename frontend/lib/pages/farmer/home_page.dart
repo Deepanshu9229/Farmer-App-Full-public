@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/utils/routes.dart';
 import 'package:frontend/widgets/drawer.dart';
-import '../widgets/weather_card.dart'; // Import WeatherCard
+import '../../widgets/weather_card.dart'; // Import WeatherCard
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/current_user.dart';
