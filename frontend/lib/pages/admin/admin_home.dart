@@ -5,7 +5,7 @@ import 'package:frontend/utils/cookie_manager.dart';
 import 'package:http/http.dart' as http;
 
 class AdminHome extends StatefulWidget {
-  const AdminHome({Key? key}) : super(key: key);
+  const AdminHome({super.key});
 
   @override
   _AdminHomeState createState() => _AdminHomeState();
@@ -14,12 +14,12 @@ class AdminHome extends StatefulWidget {
 class _AdminHomeState extends State<AdminHome> {
   late Future<List<dynamic>> secretariesFuture;
 
-  // Fetch secretaries from the backend API.
+  // Fetch secretaries and their associated farms from the backend API.
   Future<List<dynamic>> fetchSecretaries() async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    // Adjust this URL to match your backend endpoint for admin home secretaries.
-    final String url = "$baseUrl/api/admin/home/secretaries/:secretaryId/farms";
+    // Adjust the URL to your backend admin route.
+    final String url = "$baseUrl/api/admin/home/secretaries";
     try {
       final response = await http.get(
         Uri.parse(url),
@@ -29,7 +29,6 @@ class _AdminHomeState extends State<AdminHome> {
         },
       );
       if (response.statusCode == 200) {
-        // The backend should return a JSON array of secretary details.
         List<dynamic> data = jsonDecode(response.body);
         return data;
       } else {
@@ -66,27 +65,38 @@ class _AdminHomeState extends State<AdminHome> {
             return ListView.builder(
               itemCount: secretaries.length,
               itemBuilder: (context, index) {
-                final secretary = secretaries[index];
+                final secData = secretaries[index];
+                final secretary = secData['secretary'];
+                final farms = secData['farms'];
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: ListTile(
+                  child: ExpansionTile(
                     leading: const Icon(Icons.person),
                     title: Text(
                       secretary['name'] ?? 'Unknown',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Mobile: ${secretary['mobileNumber'] ?? 'N/A'}"),
-                        Text("Pincode: ${secretary['pincode'] ?? 'N/A'}"),
-                        Text("Address: ${secretary['residentialAddress'] ?? 'N/A'}"),
-                        if (secretary['areaInControl'] != null)
-                          Text(
-                            "Area: ${secretary['areaInControl']['areaName'] ?? 'N/A'} (${secretary['areaInControl']['pinCode'] ?? 'N/A'})",
-                          ),
-                      ],
-                    ),
+                    subtitle: Text("Mobile: ${secretary['mobileNumber'] ?? 'N/A'}"),
+                    children: [
+                      if (farms != null && farms is List && farms.isNotEmpty)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: farms.length,
+                          itemBuilder: (context, i) {
+                            final farm = farms[i];
+                            return ListTile(
+                              title: Text(farm['farmName'] ?? 'Unknown Farm'),
+                              subtitle: Text(
+                                  "Location: ${farm['location'] ?? 'Unknown'}\nFarmer: ${farm['farmerName'] ?? 'Unknown'}"),
+                            );
+                          },
+                        )
+                      else
+                        const ListTile(
+                          title: Text("No farms available."),
+                        )
+                    ],
                   ),
                 );
               },
