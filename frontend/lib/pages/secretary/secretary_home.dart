@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/utils/cookie_manager.dart'; // This file holds your global sessionCookie
+import 'package:frontend/widgets/drawer.dart';
 
 class SecretaryHome extends StatefulWidget {
   final String area; // The area the secretary controls
@@ -86,6 +87,7 @@ class _SecretaryHomeState extends State<SecretaryHome> {
           }
         },
       ),
+       drawer: const MyDrawer(),
     );
   }
 }

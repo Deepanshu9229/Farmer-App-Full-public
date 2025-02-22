@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/utils/cookie_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:frontend/widgets/drawer.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -18,7 +19,7 @@ class _AdminHomeState extends State<AdminHome> {
   Future<List<dynamic>> fetchSecretaries() async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    // Adjust the URL to your backend admin route.
+    // Use the correct URL (without a placeholder).
     final String url = "$baseUrl/api/admin/home/secretaries";
     try {
       final response = await http.get(
@@ -104,6 +105,7 @@ class _AdminHomeState extends State<AdminHome> {
           }
         },
       ),
+       drawer: const MyDrawer(),
     );
   }
 }

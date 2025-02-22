@@ -6,6 +6,7 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/current_user.dart';
 
+
 //Convert your HomePage to a ConsumerWidget so you can read the current user state.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -128,10 +129,7 @@ class HomePage extends ConsumerWidget {
           ),
         ],
       ),
-      drawer: MyDrawer(
-        farmerName: currentUser?.name ?? "Unknown Farmer",
-        mobileNumber: currentUser?.mobileNumber ?? "0000000000",
-      ),
+      drawer: MyDrawer(),
     );
   }
 }

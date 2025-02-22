@@ -5,10 +5,12 @@ import 'package:riverpod/riverpod.dart';
 class User{
   final String name;
   final String mobileNumber;
+  final String? role;
 
 User({
   required this.name,
   required this.mobileNumber,
+  this.role,
 });
 }
 
