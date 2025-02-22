@@ -56,8 +56,10 @@ class _OtpPageState extends State<OtpPage> {
         final responseData = jsonDecode(response.body);
         final redirectUrl = responseData['redirectUrl'] as String? ?? "";
         print("Redirect URL: $redirectUrl");
-        if (redirectUrl.contains('admin')) {
+        if (redirectUrl.contains('admin/home')) {
           Navigator.pushNamedAndRemoveUntil(context, MyRoutes.adminHomeRoute, (route) => false);
+        } else if (redirectUrl.contains('admin/signup')) {
+          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.adminSignupPage, (route) => false);
         } else if (redirectUrl.contains('secretary/home')) {
           Navigator.pushNamedAndRemoveUntil(context, MyRoutes.secretaryHomeRoute, (route) => false);
         } else if (redirectUrl.contains('secretary/signup')) {

@@ -33,7 +33,7 @@ router.post('/enter-mobile', (req, res) => {
     // Instead of generating a fixed OTP, use the one from the client
     storedOtp[mobileNumber] = otp; 
     
-    return res.json({ message: `OTP sent to ${mobileNumber}. Please verify it.` });
+    return res.json({ message: `OTP sent to ${mobileNumber}. Please verify it.` }); 
 });
 
 

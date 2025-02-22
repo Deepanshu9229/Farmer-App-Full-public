@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:frontend/utils/cookie_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:frontend/utils/cookie_manager.dart'; // This file holds your global sessionCookie
 
 class SecretaryHome extends StatefulWidget {
-  final String area;
+  final String area; // The area the secretary controls
   const SecretaryHome({Key? key, required this.area}) : super(key: key);
 
   @override
@@ -15,22 +15,29 @@ class SecretaryHome extends StatefulWidget {
 class _SecretaryHomeState extends State<SecretaryHome> {
   late Future<List<dynamic>> farmsFuture;
 
+  // Fetch farms from the backend API.
   Future<List<dynamic>> fetchFarms() async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    // Backend route for secretary's farms (ensure this matches the backend)
+    // This URL must match your backend route for secretary home farms.
     final String url = "$baseUrl/api/secretary/home/farms";
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "Cookie": sessionCookie ?? "",
-      },
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else {
-      throw Exception("Failed to fetch farms: ${response.body}");
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": sessionCookie ?? "",
+        },
+      );
+      if (response.statusCode == 200) {
+        // Expecting an array of farm details.
+        List<dynamic> data = jsonDecode(response.body);
+        return data;
+      } else {
+        throw Exception("Failed to fetch farms: ${response.body}");
+      }
+    } catch (error) {
+      throw Exception("Error: $error");
     }
   }
 
@@ -49,13 +56,13 @@ class _SecretaryHomeState extends State<SecretaryHome> {
       body: FutureBuilder<List<dynamic>>(
         future: farmsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          else if (snapshot.hasError)
+          } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
-          else if (!snapshot.hasData || snapshot.data!.isEmpty)
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text("No farms found for this area"));
-          else {
+          } else {
             final farms = snapshot.data!;
             return ListView.builder(
               itemCount: farms.length,

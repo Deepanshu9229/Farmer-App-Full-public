@@ -5,9 +5,9 @@ const Admin= require('../../models/admin.js');
 
 router.post('/signup', async (req, res) => {
     const { name , city , pincode , residentialAddress } = req.body;
-    const mobileNumber = req.session.mobileNumber;
+    const mobileNumber = req.session.mobileNumber;  // This must be set during the OTP flow
 
-    if (!name || !mobileNumber ) {
+    if (!name || !mobileNumber || !city || !pincode || !residentialAddress) {
         return res.status(400).json({ message: 'All fields are required.' });
     }
 
