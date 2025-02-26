@@ -6,15 +6,17 @@ import 'dart:convert';
 import 'package:frontend/utils/cookie_manager.dart';
 import '../tools/snacks.dart';
 import '../utils/routes.dart';
+import 'package:frontend/models/current_user.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class OtpPage extends StatefulWidget {
+class OtpPage extends ConsumerStatefulWidget {
   const OtpPage({super.key});
 
   @override
-  State<OtpPage> createState() => _OtpPageState();
+  ConsumerState<OtpPage> createState() => _OtpPageState();
 }
 
-class _OtpPageState extends State<OtpPage> {
+class _OtpPageState extends ConsumerState<OtpPage> {
   final _formKey = GlobalKey<FormState>();
   final otpController = TextEditingController();
 
@@ -45,7 +47,8 @@ class _OtpPageState extends State<OtpPage> {
     final body = jsonEncode({"otp": otpController.text});
 
     try {
-      final response = await http.post(Uri.parse(url), headers: headers, body: body);
+      final response =
+          await http.post(Uri.parse(url), headers: headers, body: body);
       if (response.statusCode == 200) {
         // Update session cookie if provided.
         final cookie = response.headers['set-cookie'];
@@ -56,28 +59,65 @@ class _OtpPageState extends State<OtpPage> {
         final responseData = jsonDecode(response.body);
         final redirectUrl = responseData['redirectUrl'] as String? ?? "";
         print("Redirect URL: $redirectUrl");
+
+        // Optionally, fetch the complete user details after OTP verification.
+        await fetchCurrentUser();
+
         if (redirectUrl.contains('admin/home')) {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.adminHomeRoute, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.adminHomeRoute, (route) => false);
         } else if (redirectUrl.contains('admin/signup')) {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.adminSignupPage, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.adminSignupPage, (route) => false);
         } else if (redirectUrl.contains('secretary/home')) {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.secretaryHomeRoute, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.secretaryHomeRoute, (route) => false);
         } else if (redirectUrl.contains('secretary/signup')) {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.secretarySignupRoute, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.secretarySignupRoute, (route) => false);
         } else if (redirectUrl.contains('signup')) {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.signupRoute, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.signupRoute, (route) => false);
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, MyRoutes.homeRoute, (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, MyRoutes.homeRoute, (route) => false);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("OTP verification failed: ${response.body}")),
         );
       }
-    }  catch (e) {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error verifying OTP: $e")),
       );
+    }
+  }
+
+  // Fetch the full current user details from the backend and update Riverpod state.
+  Future<void> fetchCurrentUser() async {
+    final String baseUrl =
+        dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/auth/current-user";
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? "",
+    };
+
+    try {
+      final response = await http.get(Uri.parse(url), headers: headers);
+      if (response.statusCode == 200) {
+        final userData = jsonDecode(response.body);
+        // Update Riverpod state with the fetched user data.
+        ref.read(currentUserProvider.notifier).setUser(User(
+          name: userData['name'],
+          mobileNumber: userData['mobileNumber'],
+        ));
+      } else {
+        print("Failed to fetch current user: ${response.body}");
+      }
+    } catch (error) {
+      print("Error fetching current user: $error");
     }
   }
 
@@ -86,7 +126,8 @@ class _OtpPageState extends State<OtpPage> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 80.0, horizontal: 32.0),
+          padding:
+              const EdgeInsets.symmetric(vertical: 80.0, horizontal: 32.0),
           child: Column(
             children: [
               const SizedBox(height: 20),

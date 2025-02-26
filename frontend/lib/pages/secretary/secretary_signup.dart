@@ -32,7 +32,10 @@ class _SecretarySignupPageState extends ConsumerState<SecretarySignupPage> {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
     final String url = "$baseUrl/api/secretary/signup";
-    final headers = {"Content-Type": "application/json", "Cookie": sessionCookie ?? "",};
+    final headers = {
+      "Content-Type": "application/json",
+      "Cookie": sessionCookie ?? "",
+    };
 
     final body = jsonEncode({
       "name": nameController.text,

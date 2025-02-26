@@ -82,4 +82,35 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 
+// routes/auth.js (or a dedicated user route)
+router.get('/current-user', async (req, res) => {
+    const { userType, mobileNumber, userId } = req.session;
+    if (!userId || !mobileNumber || !userType) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+  
+    let user;
+    switch (userType.toLowerCase()) {
+      case 'farmer':
+        user = await Farmer.findById(userId);
+        break;
+      case 'secretary':
+        user = await Secretary.findById(userId);
+        break;
+      case 'admin':
+        user = await Admin.findById(userId);
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid user type' });
+    }
+  
+    if (user) {
+      return res.status(200).json(user);
+    } else {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  });
+  
+
+
 module.exports = router;

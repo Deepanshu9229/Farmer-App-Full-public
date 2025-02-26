@@ -46,9 +46,31 @@ class MyDrawer extends ConsumerWidget {
               ),
             ),
             onTap: () {
-              Navigator.pushNamed(context, MyRoutes.homeRoute);
+              print(user?.role?.toLowerCase());
+
+              // Dynamically navigate based on the user's type.
+              if (user != null) {
+                switch (user?.role?.toLowerCase()) {
+                  case 'farmer':
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, MyRoutes.homeRoute, (route) => false);
+                    break;
+                  case 'secretary':
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, MyRoutes.secretaryHomeRoute, (route) => false);
+                    break;
+                  case 'admin':
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, MyRoutes.adminHomeRoute, (route) => false);
+                    break;
+                  default:
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, MyRoutes.homeRoute, (route) => false);
+                }
+              }
             },
           ),
+            
           ListTile(
             leading: const Icon(Icons.mail, color: Colors.black),
             title: const Text(
