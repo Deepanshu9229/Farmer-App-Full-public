@@ -1,3 +1,6 @@
+
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const auth = require('./routes/auth.js');
@@ -13,7 +16,7 @@ const adminSignupRoute = require('./routes/admin/signup');
 // const adminRoutes = require('./routes/admin/index.js'); 
 
 const app = express();
-const connectDB = require('./config/db.js');
+const connectDB = require('./config/db');
 const bodyParser = require('body-parser');
 
 
