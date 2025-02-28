@@ -1,69 +1,64 @@
-
-// lib/services/mqtt_service.dart
+import 'dart:async';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 class MQTTService {
-  // Singleton pattern
-  static final MQTTService _instance = MQTTService._internal();
-  factory MQTTService() => _instance;
-  MQTTService._internal();
+  late MqttServerClient _client;
+  final StreamController<List<MqttReceivedMessage<MqttMessage>>> _messageStreamController = StreamController.broadcast();
 
-  late MqttServerClient client;
+  Stream<List<MqttReceivedMessage<MqttMessage>>> get messageStream => _messageStreamController.stream;
 
-  /// Connect to the broker.
-  Future<void> connect({String broker = 'broker.hivemq.com', int port = 1883}) async {
-    client = MqttServerClient(broker, '');
-    client.port = port;
-    client.logging(on: true);
-    client.keepAlivePeriod = 20;
-    client.onDisconnected = _onDisconnected;
-    client.onConnected = _onConnected;
-    client.onSubscribed = _onSubscribed;
+  MQTTService() {
+    _client = MqttServerClient('your-mqtt-broker-url', '');
+    _client.port = 1883; // Use the correct port (1883 for unencrypted, 8883 for SSL/TLS)
+    _client.keepAlivePeriod = 60;
+    _client.logging(on: false);
+    _client.onConnected = _onConnected;
+    _client.onDisconnected = _onDisconnected;
+    _client.onSubscribed = _onSubscribed;
+  }
 
-    final connMess = MqttConnectMessage()
-        .withClientIdentifier('flutter_client_${DateTime.now().millisecondsSinceEpoch}')
-        .startClean() // Start with a clean session.
-        .withWillQos(MqttQos.atLeastOnce);
-    client.connectionMessage = connMess;
-
+  // Connect to MQTT broker
+  Future<void> connect() async {
     try {
-      await client.connect();
+      _client.connectionMessage = MqttConnectMessage()
+          .withClientIdentifier('flutter_client')
+          .startClean()
+          .withWillQos(MqttQos.atMostOnce);
+
+      await _client.connect();
     } catch (e) {
-      print('MQTT connection exception: $e');
-      client.disconnect();
+      print('MQTT Connection Error: $e');
+      _client.disconnect();
     }
 
-    if (client.connectionStatus!.state != MqttConnectionState.connected) {
-      print('MQTT client connection failed - state is ${client.connectionStatus!.state}');
-      client.disconnect();
+    _client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+      _messageStreamController.add(messages);
+    });
+  }
+
+  // Subscribe to a topic
+  void subscribe(String topic) {
+    if (_client.connectionStatus!.state == MqttConnectionState.connected) {
+      _client.subscribe(topic, MqttQos.atLeastOnce);
+    } else {
+      print('MQTT not connected. Cannot subscribe.');
     }
   }
 
-  void _onConnected() {
-    print('MQTT client connected');
-  }
-
-  void _onDisconnected() {
-    print('MQTT client disconnected');
-  }
-
-  void _onSubscribed(String topic) {
-    print('Subscribed to topic: $topic');
-  }
-
-  /// Subscribe to a topic.
-  void subscribe(String topic, {MqttQos qos = MqttQos.atLeastOnce}) {
-    client.subscribe(topic, qos);
-  }
-
-  /// Publish a message to a topic.
-  void publish(String topic, String message, {MqttQos qos = MqttQos.atLeastOnce}) {
+  // Publish a message
+  void publish(String topic, String message) {
     final builder = MqttClientPayloadBuilder();
     builder.addString(message);
-    client.publishMessage(topic, qos, builder.payload!);
+    _client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
   }
 
-  /// Returns the stream of incoming messages.
-  Stream<List<MqttReceivedMessage<MqttMessage>>>? get messageStream => client.updates;
+  // Disconnect from MQTT
+  void disconnect() {
+    _client.disconnect();
+  }
+
+  void _onConnected() => print('Connected to MQTT broker');
+  void _onDisconnected() => print('Disconnected from MQTT broker');
+  void _onSubscribed(String topic) => print('Subscribed to topic: $topic');
 }

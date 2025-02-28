@@ -7,6 +7,8 @@ import 'package:frontend/models/pump_model.dart';
 import 'package:frontend/widgets/pump_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wifi_scan/wifi_scan.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:frontend/services/mqtt_service.dart'; // Import MQTTService
 
 class PumpsPage extends StatefulWidget {
   final String farmId;
@@ -22,12 +24,14 @@ class _PumpsPageState extends State<PumpsPage> {
   List<Pump> pumps = [];
   bool isLoading = true;
   List<WiFiAccessPoint> availableNetworks = [];
+  final MQTTService _mqttService = MQTTService(); // Initialize MQTTService
 
   @override
   void initState() {
     super.initState();
     requestPermissions();
     fetchPumps();
+    connectMQTT();
   }
 
   // Request necessary permissions for Wi-Fi scanning.
@@ -38,6 +42,37 @@ class _PumpsPageState extends State<PumpsPage> {
     } else {
       debugPrint("Location permission is required to scan Wi-Fi networks.");
     }
+  }
+
+  //-----mqtt
+  // Connect to MQTT broker and subscribe to pump status updates.
+  Future<void> connectMQTT() async {
+    await _mqttService.connect();
+    // Example topic: "farmers/<farmerId>/farms/<farmId>/pumps/+/status/response"
+    // In production, replace '+' with a specific pump ID if needed.
+    final topic = "farmers/+/farms/${widget.farmId}/pumps/+/status/response";
+    _mqttService.subscribe(topic);
+
+    // Listen for messages and update pump statuses in real time.
+    _mqttService.messageStream.listen((messages) {
+      for (var message in messages) {
+        final payload = MqttPublishPayload.bytesToStringAsString(
+            (message.payload as MqttPublishMessage).payload.message);
+        final data = jsonDecode(payload);
+        final String pumpId = message.topic.split('/')[4]; // extract pumpId
+        final bool status = data['status'] == 'on';
+
+        setState(() {
+          pumps = pumps.map((pump) {
+            if (pump.id == pumpId) {
+              return pump.copyWith(status: status);
+            }
+            return pump;
+          }).toList();
+        });
+        debugPrint("Real-time update for pump $pumpId: status $status");
+      }
+    });
   }
 
   // Fetch pumps for the selected farm from the backend API.
@@ -170,7 +205,8 @@ class _PumpsPageState extends State<PumpsPage> {
               if (id.isNotEmpty && loc.isNotEmpty && pumpName.isNotEmpty) {
                 final String baseUrl =
                     dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-                final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/add";
+                final String url =
+                    "$baseUrl/api/farmer/${widget.farmId}/pumps/add";
                 final headers = {
                   "Content-Type": "application/json",
                   "Cookie": sessionCookie ?? "",
@@ -182,7 +218,8 @@ class _PumpsPageState extends State<PumpsPage> {
                   // "timer": timer,
                 });
                 try {
-                  final response = await http.post(Uri.parse(url), headers: headers, body: body);
+                  final response = await http.post(Uri.parse(url),
+                      headers: headers, body: body);
                   if (response.statusCode == 201) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Pump added successfully")),
@@ -191,14 +228,17 @@ class _PumpsPageState extends State<PumpsPage> {
                     fetchPumps();
                   } else {
                     final errorData = jsonDecode(response.body);
-                    final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+                    final errorMessage = errorData['message'] ??
+                        errorData['error'] ??
+                        'Unknown error';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Error: $errorMessage")),
                     );
                   }
                 } catch (error) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Failed to connect to server: $error")),
+                    SnackBar(
+                        content: Text("Failed to connect to server: $error")),
                   );
                 }
               }
@@ -233,7 +273,8 @@ class _PumpsPageState extends State<PumpsPage> {
                       return ListTile(
                         title: Text(network.ssid),
                         subtitle: Text("Signal: ${network.level}"),
-                        onTap: () => debugPrint("Connecting to ${network.ssid}..."),
+                        onTap: () =>
+                            debugPrint("Connecting to ${network.ssid}..."),
                       );
                     },
                   )
