@@ -1,41 +1,22 @@
-// const Pump = require('../models/pump');
+const mqtt = require("mqtt");
+const client = mqtt.connect("308a324019804dfc8f98afa69818681a.s1.eu.hivemq.cloud"); // Replace with your broker
 
-// exports.addPump = async (req, res) => {
-//     const { name, farmId } = req.body;
+exports.sendWiFiCredentials = async (req, res) => {
+  const { farmId, pumpId } = req.params; // Directly get pumpId from params
+  const { ssid, password } = req.body; // Only SSID and password needed here
 
-//     try {
-//         const pump = new Pump({ name, farmId });
-//         await pump.save();
-//         res.status(201).json({ message: 'Pump added successfully', pump });
-//     } catch (error) {
-//         res.status(500).json({ error: 'Server error' });
-//     }
-// };
+  if (!ssid || !password) {
+    return res.status(400).json({ error: "SSID and password are required" });
+  }
 
+  const topic = `farm/${farmId}/pump/${pumpId}/wifi/credentials`; // Specific topic for credentials
+  const payload = JSON.stringify({ ssid, password });
 
-// exports.getPumps = async (req, res) => {
-//     const { farmId } = req.params;
-
-//     try {
-//         const pumps = await Pump.find({ farmId });
-//         res.status(200).json(pumps);
-//     } catch (error) {
-//         res.status(500).json({ error: 'Server error' });
-//     }
-// };
-
-
-// exports.updatePumpStatus = async (req, res) => {
-//     const { pumpId } = req.params;
-//     const { status, interval } = req.body;
-
-//     try {
-//         const pump = await Pump.findByIdAndUpdate(pumpId, { status, interval }, { new: true });
-//         if (!pump) {
-//             return res.status(404).json({ error: 'Pump not found' });
-//         }
-//         res.status(200).json({ message: 'Pump updated successfully', pump });
-//     } catch (error) {
-//         res.status(500).json({ error: 'Server error' });
-//     }
-// };
+  client.publish(topic, payload, (error) => {
+    if (error) {
+      console.error("MQTT publish error:", error);  // Add error logging
+      return res.status(500).json({ error: "Failed to publish MQTT message" });
+    }
+    res.json({ message: "Wi-Fi credentials sent via MQTT" });
+  });
+};

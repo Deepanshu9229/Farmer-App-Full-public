@@ -25,13 +25,14 @@ class _PumpsPageState extends State<PumpsPage> {
   bool isLoading = true;
   List<WiFiAccessPoint> availableNetworks = [];
   final MQTTService _mqttService = MQTTService(); // Initialize MQTTService
+  final Map<String, String> _pumpStatuses = {}; // Store pump statuses
 
   @override
   void initState() {
     super.initState();
     requestPermissions();
     fetchPumps();
-    connectMQTT();
+    connectMQTT(); // Call connectMQTT here
   }
 
   // Request necessary permissions for Wi-Fi scanning.
@@ -46,31 +47,27 @@ class _PumpsPageState extends State<PumpsPage> {
 
   //-----mqtt
   // Connect to MQTT broker and subscribe to pump status updates.
-  Future<void> connectMQTT() async {
+    Future<void> connectMQTT() async {
     await _mqttService.connect();
-    // Example topic: "farmers/<farmerId>/farms/<farmId>/pumps/+/status/response"
-    // In production, replace '+' with a specific pump ID if needed.
-    final topic = "farmers/+/farms/${widget.farmId}/pumps/+/status/response";
-    _mqttService.subscribe(topic);
 
-    // Listen for messages and update pump statuses in real time.
+    // Subscribe to individual pump status topics.
+    for (var pump in pumps) {
+      final topic = "farm/${widget.farmId}/pump/${pump.id}/status";
+      _mqttService.subscribe(topic);
+    }
+
     _mqttService.messageStream.listen((messages) {
       for (var message in messages) {
+        final topic = message.topic;
         final payload = MqttPublishPayload.bytesToStringAsString(
-            (message.payload as MqttPublishMessage).payload.message);
-        final data = jsonDecode(payload);
-        final String pumpId = message.topic.split('/')[4]; // extract pumpId
-        final bool status = data['status'] == 'on';
+          (message.payload as MqttPublishMessage).payload.message,
+        );
+        final pumpId = topic.split('/')[3]; // Extract pumpId from topic
 
         setState(() {
-          pumps = pumps.map((pump) {
-            if (pump.id == pumpId) {
-              return pump.copyWith(status: status);
-            }
-            return pump;
-          }).toList();
+          _pumpStatuses[pumpId] = payload; // Store the status
         });
-        debugPrint("Real-time update for pump $pumpId: status $status");
+        debugPrint("Received status for pump $pumpId: $payload");
       }
     });
   }
@@ -106,7 +103,15 @@ class _PumpsPageState extends State<PumpsPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
     }
+     if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+
+      connectMQTT();
+    }
   }
+  
 
   // Delete a pump using the backend API.
   Future<void> deletePump(String pumpId) async {
@@ -294,6 +299,43 @@ class _PumpsPageState extends State<PumpsPage> {
     );
   }
 
+ // Method to send WiFi credentials to a specific pump
+  Future<void> _sendWifiCredentials(String pumpId, String ssid, String password) async {
+    final String baseUrl = dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
+    final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/$pumpId/wifi"; // Corrected URL
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": sessionCookie ?? "",
+        },
+        body: jsonEncode({
+          "ssid": ssid,
+          "password": password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Wi-Fi credentials sent successfully")),
+        );
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error sending credentials: $errorMessage")),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to connect to server: $error")),
+      );
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -309,30 +351,48 @@ class _PumpsPageState extends State<PumpsPage> {
                   itemCount: pumps.length,
                   itemBuilder: (context, index) {
                     final pump = pumps[index];
+                     final status = _pumpStatuses[pump.id] ?? "disconnected";  // Get status, default to disconnected
                     return PumpWidget(
-                      pump: pump,
-                      onToggle: (status) {
-                        setState(() {
-                          pumps[index] = pump.copyWith(status: status);
-                        });
-                      },
-                      onTimerUpdate: (newTimer) {
-                        setState(() {
-                          pumps[index] = pump.copyWith(timer: newTimer);
-                        });
-                      },
-                      onDelete: () {
-                        deletePump(pump.id);
-                      },
-                    );
-                  },
-                )
-              : const Center(child: Text("No pumps found.")),
+              pump: pump,
+              status: status,  //Here is the fix for missing status value
+              onToggle: (status) {
+                _togglePumpStatus(pump.id, status);  // Call new toggle function
+              },
+              onTimerUpdate: (newTimer) {
+                setState(() {
+                  pumps[index] = pump.copyWith(timer: newTimer);
+                });
+              },
+              onDelete: () {
+                deletePump(pump.id);
+              },
+              onSendWiFiCredentials: (ssid, password) {  // Pass callback
+                _sendWifiCredentials(pump.id, ssid, password);
+              },
+            );
+          },
+      )
+          : const Center(child: Text("No pumps found.")),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddPumpDialog,
         backgroundColor: Colors.blue.shade200,
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _togglePumpStatus(String pumpId, bool newStatus) {
+    final String topic = "farm/${widget.farmId}/pump/$pumpId/led/control";
+    final String message = newStatus ? "on" : "off";
+    _mqttService.publish(topic, message);
+    //Update pump status locally in flutter
+    setState(() {
+      pumps = pumps.map((pump) {
+        if (pump.id == pumpId) {
+          return pump.copyWith(status: newStatus);
+        }
+        return pump;
+      }).toList();
+    });
   }
 }
