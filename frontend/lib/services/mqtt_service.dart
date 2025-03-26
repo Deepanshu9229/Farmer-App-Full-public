@@ -1,64 +1,84 @@
-import 'dart:async';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MQTTService {
+  static final MQTTService _instance = MQTTService._internal();
+  factory MQTTService() => _instance;
+  MQTTService._internal();
+
   late MqttServerClient _client;
-  final StreamController<List<MqttReceivedMessage<MqttMessage>>> _messageStreamController = StreamController.broadcast();
+  final Map<String, Function(String)> _messageHandlers = {};
+  bool _isConnected = false;
 
-  Stream<List<MqttReceivedMessage<MqttMessage>>> get messageStream => _messageStreamController.stream;
+  bool get isConnected => _isConnected; // Public getter for connection status
 
-  MQTTService() {
-    _client = MqttServerClient('your-mqtt-broker-url', '');
-    _client.port = 1883; // Use the correct port (1883 for unencrypted, 8883 for SSL/TLS)
-    _client.keepAlivePeriod = 60;
-    _client.logging(on: false);
-    _client.onConnected = _onConnected;
-    _client.onDisconnected = _onDisconnected;
-    _client.onSubscribed = _onSubscribed;
-  }
-
-  // Connect to MQTT broker
   Future<void> connect() async {
+    if (_isConnected) return;
+
+    final String broker = dotenv.env['MQTT_BROKER_URL'] ??
+        '308a324019804dfc8f98afa69818681a.s1.eu.hivemq.cloud';
+    final String username = dotenv.env['MQTT_USERNAME'] ?? 'deepa42';
+    final String password = dotenv.env['MQTT_PASSWORD'] ?? 'deepa42@Lpa';
+
+    _client = MqttServerClient.withPort(
+        broker, 'flutter_client_${DateTime.now().millisecondsSinceEpoch}', 8883);
+    _client.secure = true;
+    _client.keepAlivePeriod = 30;
+    _client.logging(on: false);
+
+    final connMessage = MqttConnectMessage()
+        .authenticateAs(username, password)
+        .startClean()
+        .withWillQos(MqttQos.atLeastOnce);
+    _client.connectionMessage = connMessage;
+
     try {
-      _client.connectionMessage = MqttConnectMessage()
-          .withClientIdentifier('flutter_client')
-          .startClean()
-          .withWillQos(MqttQos.atMostOnce);
-
       await _client.connect();
+      _isConnected = true;
+
+      _client.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+        for (var message in messages) {
+          final payload = MqttPublishPayload.bytesToStringAsString(
+              (message.payload as MqttPublishMessage).payload.message);
+          _messageHandlers[message.topic]?.call(payload);
+        }
+      });
     } catch (e) {
-      print('MQTT Connection Error: $e');
-      _client.disconnect();
-    }
-
-    _client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-      _messageStreamController.add(messages);
-    });
-  }
-
-  // Subscribe to a topic
-  void subscribe(String topic) {
-    if (_client.connectionStatus!.state == MqttConnectionState.connected) {
-      _client.subscribe(topic, MqttQos.atLeastOnce);
-    } else {
-      print('MQTT not connected. Cannot subscribe.');
+      _isConnected = false;
+      print('MQTT Connection Failed: $e');
     }
   }
 
-  // Publish a message
+  void subscribe(String topic, Function(String) handler) {
+    if (!_isConnected) return;
+    if (_messageHandlers.containsKey(topic)) return;
+
+    _messageHandlers[topic] = handler;
+    _client.subscribe(topic, MqttQos.atLeastOnce);
+  }
+
   void publish(String topic, String message) {
+    if (!_isConnected) return;
+
     final builder = MqttClientPayloadBuilder();
     builder.addString(message);
     _client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
   }
 
-  // Disconnect from MQTT
-  void disconnect() {
-    _client.disconnect();
+  void publishMessage(String topic, String message) {
+    publish(topic, message);
   }
 
-  void _onConnected() => print('Connected to MQTT broker');
-  void _onDisconnected() => print('Disconnected from MQTT broker');
-  void _onSubscribed(String topic) => print('Subscribed to topic: $topic');
+  void unsubscribe(String topic) {
+    if (!_isConnected) return;
+    _messageHandlers.remove(topic);
+    _client.unsubscribe(topic);
+  }
+
+  void disconnect() {
+    if (!_isConnected) return;
+    _client.disconnect();
+    _isConnected = false;
+  }
 }

@@ -7,8 +7,6 @@ import 'package:frontend/models/pump_model.dart';
 import 'package:frontend/widgets/pump_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wifi_scan/wifi_scan.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-import 'package:frontend/services/mqtt_service.dart'; // Import MQTTService
 
 class PumpsPage extends StatefulWidget {
   final String farmId;
@@ -24,55 +22,23 @@ class _PumpsPageState extends State<PumpsPage> {
   List<Pump> pumps = [];
   bool isLoading = true;
   List<WiFiAccessPoint> availableNetworks = [];
-  final MQTTService _mqttService = MQTTService(); // Initialize MQTTService
-  final Map<String, String> _pumpStatuses = {}; // Store pump statuses
 
   @override
   void initState() {
     super.initState();
     requestPermissions();
     fetchPumps();
-    connectMQTT(); // Call connectMQTT here
   }
 
-  // Request necessary permissions for Wi-Fi scanning.
+  // Request permissions for Wi-Fi scanning.
   Future<void> requestPermissions() async {
     final status = await Permission.locationWhenInUse.request();
-    if (status.isGranted) {
-      debugPrint("Location permission granted.");
-    } else {
-      debugPrint("Location permission is required to scan Wi-Fi networks.");
-    }
+    debugPrint(status.isGranted
+        ? "Location permission granted."
+        : "Location permission is required to scan Wi-Fi networks.");
   }
 
-  //-----mqtt
-  // Connect to MQTT broker and subscribe to pump status updates.
-    Future<void> connectMQTT() async {
-    await _mqttService.connect();
-
-    // Subscribe to individual pump status topics.
-    for (var pump in pumps) {
-      final topic = "farm/${widget.farmId}/pump/${pump.id}/status";
-      _mqttService.subscribe(topic);
-    }
-
-    _mqttService.messageStream.listen((messages) {
-      for (var message in messages) {
-        final topic = message.topic;
-        final payload = MqttPublishPayload.bytesToStringAsString(
-          (message.payload as MqttPublishMessage).payload.message,
-        );
-        final pumpId = topic.split('/')[3]; // Extract pumpId from topic
-
-        setState(() {
-          _pumpStatuses[pumpId] = payload; // Store the status
-        });
-        debugPrint("Received status for pump $pumpId: $payload");
-      }
-    });
-  }
-
-  // Fetch pumps for the selected farm from the backend API.
+  // Fetch pumps from backend API.
   Future<void> fetchPumps() async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
@@ -91,29 +57,19 @@ class _PumpsPageState extends State<PumpsPage> {
           isLoading = false;
         });
       } else {
-        if (!mounted) return;
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Error: Unable to fetch pumps")),
         );
       }
     } catch (e) {
-      if (!mounted) return;
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
     }
-     if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-
-      connectMQTT();
-    }
   }
-  
 
-  // Delete a pump using the backend API.
+  // Delete a pump via backend API.
   Future<void> deletePump(String pumpId) async {
     final String baseUrl =
         dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
@@ -123,8 +79,6 @@ class _PumpsPageState extends State<PumpsPage> {
       "Cookie": sessionCookie ?? "",
     };
 
-    debugPrint("Deleting pump with id: $pumpId");
-    debugPrint("DeletePump URL: $url");
     try {
       final response = await http.delete(Uri.parse(url), headers: headers);
       if (response.statusCode == 200) {
@@ -140,18 +94,16 @@ class _PumpsPageState extends State<PumpsPage> {
             .showSnackBar(SnackBar(content: Text("Error: $errorMessage")));
       }
     } catch (error) {
-      debugPrint("DeletePump error: $error");
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to connect to server: $error")));
     }
   }
 
-  // Display a dialog to add a new pump via backend API.
+  // Dialog to add a new pump.
   void _showAddPumpDialog() {
-    final TextEditingController pumpNameController = TextEditingController();
-    final TextEditingController idController = TextEditingController();
-    final TextEditingController locationController = TextEditingController();
-    // final TextEditingController timerController = TextEditingController();
+    final pumpNameController = TextEditingController();
+    final idController = TextEditingController();
+    final locationController = TextEditingController();
 
     showDialog(
       context: context,
@@ -174,11 +126,6 @@ class _PumpsPageState extends State<PumpsPage> {
                 controller: locationController,
                 decoration: const InputDecoration(labelText: "Location"),
               ),
-              // TextField(
-              //   controller: timerController,
-              //   keyboardType: TextInputType.number,
-              //   decoration: const InputDecoration(labelText: "Timer (minutes)"),
-              // ),
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Column(
@@ -186,9 +133,7 @@ class _PumpsPageState extends State<PumpsPage> {
                     const Text("Scan Wi-Fi to Connect"),
                     IconButton(
                       icon: const Icon(Icons.wifi),
-                      onPressed: () {
-                        _showWiFiDialog();
-                      },
+                      onPressed: _showWiFiDialog,
                     ),
                   ],
                 ),
@@ -198,16 +143,14 @@ class _PumpsPageState extends State<PumpsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
               final pumpName = pumpNameController.text.trim();
               final id = idController.text.trim();
               final loc = locationController.text.trim();
-              // final timer = num.tryParse(timerController.text) ?? 0;
-              if (id.isNotEmpty && loc.isNotEmpty && pumpName.isNotEmpty) {
+              if (pumpName.isNotEmpty && id.isNotEmpty && loc.isNotEmpty) {
                 final String baseUrl =
                     dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
                 final String url =
@@ -220,11 +163,10 @@ class _PumpsPageState extends State<PumpsPage> {
                   "pumpName": pumpName,
                   "pumpId": id,
                   "location": loc,
-                  // "timer": timer,
                 });
                 try {
-                  final response = await http.post(Uri.parse(url),
-                      headers: headers, body: body);
+                  final response =
+                      await http.post(Uri.parse(url), headers: headers, body: body);
                   if (response.statusCode == 201) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Pump added successfully")),
@@ -233,17 +175,14 @@ class _PumpsPageState extends State<PumpsPage> {
                     fetchPumps();
                   } else {
                     final errorData = jsonDecode(response.body);
-                    final errorMessage = errorData['message'] ??
-                        errorData['error'] ??
-                        'Unknown error';
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Error: $errorMessage")),
-                    );
+                    final errorMessage =
+                        errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text("Error: $errorMessage")));
                   }
                 } catch (error) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text("Failed to connect to server: $error")),
+                    SnackBar(content: Text("Failed to connect to server: $error")),
                   );
                 }
               }
@@ -255,7 +194,7 @@ class _PumpsPageState extends State<PumpsPage> {
     );
   }
 
-  // Display a dialog showing scanned Wi-Fi networks.
+  // Dialog to show available Wi-Fi networks.
   void _showWiFiDialog() {
     showDialog(
       context: context,
@@ -291,50 +230,41 @@ class _PumpsPageState extends State<PumpsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close")),
         ],
       ),
     );
   }
 
- // Method to send WiFi credentials to a specific pump
+  // Send Wi-Fi credentials to a specific pump.
   Future<void> _sendWifiCredentials(String pumpId, String ssid, String password) async {
     final String baseUrl = dotenv.env['API_BASE_URL_DEV'] ?? 'http://localhost:4000';
-    final String url = "$baseUrl/api/farmer/${widget.farmId}/pumps/$pumpId/wifi"; // Corrected URL
+    // IMPORTANT: Ensure your API route matches the one defined in your backend.
+    final String url = "$baseUrl/api/farmer/farm/${widget.farmId}/pump/$pumpId/wifi/credentials";
+  
 
     try {
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": sessionCookie ?? "",
-        },
-        body: jsonEncode({
-          "ssid": ssid,
-          "password": password,
-        }),
-      );
-
+      final response = await http.post(Uri.parse(url), headers: {
+        "Content-Type": "application/json",
+        "Cookie": sessionCookie ?? "",
+      }, body: jsonEncode({"ssid": ssid, "password": password}));
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Wi-Fi credentials sent successfully")),
         );
       } else {
         final errorData = jsonDecode(response.body);
-        final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Unknown error';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error sending credentials: $errorMessage")),
-        );
+        final errorMessage =
+            errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error sending credentials: $errorMessage")));
       }
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to connect to server: $error")),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Failed to connect to server: $error")));
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -351,28 +281,27 @@ class _PumpsPageState extends State<PumpsPage> {
                   itemCount: pumps.length,
                   itemBuilder: (context, index) {
                     final pump = pumps[index];
-                     final status = _pumpStatuses[pump.id] ?? "disconnected";  // Get status, default to disconnected
+                    // For demonstration, default pump status is "ready".
+                    final status = "ready";
                     return PumpWidget(
-              pump: pump,
-              status: status,  //Here is the fix for missing status value
-              onToggle: (status) {
-                _togglePumpStatus(pump.id, status);  // Call new toggle function
-              },
-              onTimerUpdate: (newTimer) {
-                setState(() {
-                  pumps[index] = pump.copyWith(timer: newTimer);
-                });
-              },
-              onDelete: () {
-                deletePump(pump.id);
-              },
-              onSendWiFiCredentials: (ssid, password) {  // Pass callback
-                _sendWifiCredentials(pump.id, ssid, password);
-              },
-            );
-          },
-      )
-          : const Center(child: Text("No pumps found.")),
+                      pump: pump,
+                      farmId: widget.farmId,
+                      onToggle: (status) {
+                        // Additional logic if needed.
+                      },
+                      onTimerUpdate: (newTimer) {
+                        setState(() {
+                          pumps[index] = pump.copyWith(timer: newTimer);
+                        });
+                      },
+                      onDelete: () => deletePump(pump.id),
+                      onSendWiFiCredentials: (ssid, password) =>
+                          _sendWifiCredentials(pump.id, ssid, password),
+                      status: status,
+                    );
+                  },
+                )
+              : const Center(child: Text("No pumps found")),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddPumpDialog,
         backgroundColor: Colors.blue.shade200,
@@ -381,18 +310,6 @@ class _PumpsPageState extends State<PumpsPage> {
     );
   }
 
-  void _togglePumpStatus(String pumpId, bool newStatus) {
-    final String topic = "farm/${widget.farmId}/pump/$pumpId/led/control";
-    final String message = newStatus ? "on" : "off";
-    _mqttService.publish(topic, message);
-    //Update pump status locally in flutter
-    setState(() {
-      pumps = pumps.map((pump) {
-        if (pump.id == pumpId) {
-          return pump.copyWith(status: newStatus);
-        }
-        return pump;
-      }).toList();
-    });
-  }
+  // _togglePumpStatus is delegated to PumpWidget.
+  Future<void> _togglePumpStatus(String pumpId, bool status) async {}
 }

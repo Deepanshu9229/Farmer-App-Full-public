@@ -9,7 +9,8 @@ const cors = require('cors');
 const farmerSignupRoute = require('./routes/farmer/signup');
 const secretarySignupRoute = require('./routes/secretary/signup');
 const adminSignupRoute = require('./routes/admin/signup');
-
+// Import pumpWifi route from routes/farmer/pumpWifi.js
+const pumpWifiRoute = require('./routes/farmer/pumpWifi');
 
 // const farmerRoutes = require('./routes/farmer/index.js');
 // const secretaryRoutes = require('./routes/secretary/index.js'); 
@@ -50,6 +51,8 @@ app.use('/api/auth', auth);
 app.use('/api/farmer', farmerSignupRoute);
 app.use('/api/secretary', secretarySignupRoute);
 app.use('/api/admin', adminSignupRoute);
+// Mount the route on a path (e.g., /api/farmer)
+app.use('/api/farmer', pumpWifiRoute);
 
 app.use('/api/farmer', isAuthenticated, require('./routes/farmer/index'));
 app.use('/api/secretary', isAuthenticated, require('./routes/secretary/index'));
