@@ -40,3 +40,4 @@ flutter:
     - assets/images/
     - assets/files/
     - assets/3d/Tree.glb
+    - assets/cert.pem

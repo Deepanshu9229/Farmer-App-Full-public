@@ -57,11 +57,15 @@ class _PumpWidgetState extends State<PumpWidget> {
 
   void _togglePump(bool value) {
     if (!_isConnected) return;
+
+    // Immediately update local state
+    setState(() {
+      _localStatus = value ? 'on' : 'off';
+    });
+
     final controlTopic = 'farm/${widget.farmId}/pump/${widget.pump.id}/control';
     final newState = value ? 'ON' : 'OFF';
-    if (_localStatus != newState.toLowerCase()) {
-      mqttService.publish(controlTopic, newState);
-    }
+    mqttService.publish(controlTopic, newState);
     widget.onToggle(value);
   }
 
@@ -102,7 +106,8 @@ class _PumpWidgetState extends State<PumpWidget> {
             widget.pump.pumpName.isNotEmpty
                 ? widget.pump.pumpName[0].toUpperCase()
                 : '',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
@@ -115,10 +120,11 @@ class _PumpWidgetState extends State<PumpWidget> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(              
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Wi-Fi Configuration", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("Wi-Fi Configuration",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 TextField(
                   controller: _ssidController,
                   decoration: const InputDecoration(labelText: "SSID"),
@@ -139,12 +145,11 @@ class _PumpWidgetState extends State<PumpWidget> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Switch(
-                      value: _localStatus == 'on' || _localStatus == 'active',
+                      value: _localStatus == 'on',
                       activeColor: Colors.green,
                       inactiveThumbColor: Colors.red,
-                      onChanged: (widget.status == "ready")
-                          ? _togglePump
-                          : null,
+                      onChanged:
+                          (widget.status == "ready") ? _togglePump : null,
                     ),
                     IconButton(
                       icon: const Icon(Icons.timer),
@@ -169,9 +174,12 @@ class _PumpWidgetState extends State<PumpWidget> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Pump"),
-        content: Text("Delete pump ${widget.pump.pumpName} (ID: ${widget.pump.id})?"),
+        content: Text(
+            "Delete pump ${widget.pump.pumpName} (ID: ${widget.pump.id})?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -185,7 +193,8 @@ class _PumpWidgetState extends State<PumpWidget> {
   }
 
   void _showTimerDialog(BuildContext context) {
-    final controller = TextEditingController(text: widget.pump.timer.toString());
+    final controller =
+        TextEditingController(text: widget.pump.timer.toString());
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -196,12 +205,14 @@ class _PumpWidgetState extends State<PumpWidget> {
           decoration: const InputDecoration(labelText: "Minutes"),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           TextButton(
             onPressed: () {
               final timerValue = num.tryParse(controller.text) ?? 0;
               widget.onTimerUpdate(timerValue);
-              mqttService.publishMessage("pump/timer", timerValue.toString());
+              mqttService.publish("pump/timer", timerValue.toString());
               Navigator.pop(context);
             },
             child: const Text("Set"),

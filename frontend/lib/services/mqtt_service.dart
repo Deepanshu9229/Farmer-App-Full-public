@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,6 +15,19 @@ class MQTTService {
 
   bool get isConnected => _isConnected; // Public getter for connection status
 
+  // Load SSL certificate from assets
+  Future<SecurityContext> _getSecurityContext() async {
+    final context = SecurityContext.defaultContext;
+    try {
+      final certData = await rootBundle.load('assets/cert.pem');
+      context.setTrustedCertificatesBytes(certData.buffer.asUint8List());
+      print("✅ Certificate loaded successfully.");
+    } catch (e) {
+      print("❌ Error loading certificate: $e");
+    }
+    return context;
+  }
+
   Future<void> connect() async {
     if (_isConnected) return;
 
@@ -24,18 +39,31 @@ class MQTTService {
     _client = MqttServerClient.withPort(
         broker, 'flutter_client_${DateTime.now().millisecondsSinceEpoch}', 8883);
     _client.secure = true;
+    _client.securityContext = await _getSecurityContext();
     _client.keepAlivePeriod = 30;
-    _client.logging(on: false);
+    _client.logging(on: true);
+
+    _client.onDisconnected = () {
+      _isConnected = false;
+      print("❌ Disconnected from MQTT Broker.");
+    };
 
     final connMessage = MqttConnectMessage()
+        .withClientIdentifier('flutter_client_${DateTime.now().millisecondsSinceEpoch}')
+        .withProtocolName("MQTT")
+        .withProtocolVersion(4)
         .authenticateAs(username, password)
         .startClean()
+        .withWillTopic('disconnect')
+        .withWillMessage('Client disconnected unexpectedly')
         .withWillQos(MqttQos.atLeastOnce);
+
     _client.connectionMessage = connMessage;
 
     try {
       await _client.connect();
       _isConnected = true;
+      print("✅ Connected to MQTT Broker!");
 
       _client.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
         for (var message in messages) {
@@ -46,7 +74,7 @@ class MQTTService {
       });
     } catch (e) {
       _isConnected = false;
-      print('MQTT Connection Failed: $e');
+      print('❌ MQTT Connection Failed: $e');
     }
   }
 
@@ -56,6 +84,7 @@ class MQTTService {
 
     _messageHandlers[topic] = handler;
     _client.subscribe(topic, MqttQos.atLeastOnce);
+    print("✅ Subscribed to topic: $topic");
   }
 
   void publish(String topic, String message) {
@@ -64,21 +93,20 @@ class MQTTService {
     final builder = MqttClientPayloadBuilder();
     builder.addString(message);
     _client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
-  }
-
-  void publishMessage(String topic, String message) {
-    publish(topic, message);
+    print("✅ Published message to $topic: $message");
   }
 
   void unsubscribe(String topic) {
     if (!_isConnected) return;
     _messageHandlers.remove(topic);
     _client.unsubscribe(topic);
+    print("✅ Unsubscribed from topic: $topic");
   }
 
   void disconnect() {
     if (!_isConnected) return;
     _client.disconnect();
     _isConnected = false;
+    print("✅ MQTT Client Disconnected.");
   }
 }
