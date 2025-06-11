@@ -24,6 +24,6 @@ This project allows wireless control of IoT devices like motors, lights, or pump
 ### ⚙️ ESP32 Setup
 
 1. Power ESP32 via USB or 5V adapter  
-2. Flash the Arduino code (`control_motor.ino`) to ESP32  
+2. Flash the Arduino code to ESP32  
 3. Connect a relay to ESP32 GPIO to control a motor/light
 
