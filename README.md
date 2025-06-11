@@ -1,6 +1,6 @@
 # 🌾 Farmer App with ESP32 IoT Control
 
-This project allows wireless control of IoT devices like motors, lights, or pumps using an **ESP32 microcontroller** and a **Flutter-based mobile app**. It's ideal for smart farming and home automation where devices are controlled over Wi-Fi without needing internet access.
+This project allows wireless control of IoT devices like motors, lights, or pumps using an **ESP32 microcontroller** and a **Flutter-based mobile app**. It's ideal for smart farming and home automation where devices are controlled over Wi-Fi.
 
 **Demo Video -** - https://www.youtube.com/watch?v=bEw0-vhC0tY
 
