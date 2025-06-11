@@ -14,8 +14,9 @@ This project allows wireless control of IoT devices like motors, lights, or pump
 ## 🔧 Tech Stack
 
 - **Frontend**: Flutter (Dart)
+- **Backend**: NodeJs, Express
 - **IoT Controller**: ESP32
-- **Communication**: Wi-Fi (AP or same LAN)
+- **Communication**: Wi-Fi (AP or same LAN)/ MQTT
 - **Firmware**: Arduino C++ (ESP32 sketch)
 
 
