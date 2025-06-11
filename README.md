@@ -15,6 +15,7 @@ This project allows wireless control of IoT devices like motors, lights, or pump
 
 - **Frontend**: Flutter (Dart)
 - **Backend**: NodeJs, Express
+- **Database**: MongoDB
 - **IoT Controller**: ESP32
 - **Communication**: Wi-Fi (AP or same LAN)/ MQTT
 - **Firmware**: Arduino C++ (ESP32 sketch)
